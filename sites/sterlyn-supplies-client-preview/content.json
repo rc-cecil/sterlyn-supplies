@@ -1,0 +1,320 @@
+{
+  "categories": [
+    [
+      "kitchens",
+      "Fitted kitchens",
+      "forest-shaker"
+    ],
+    [
+      "cabinetry",
+      "Cabinetry",
+      "walnut-base-cabinet"
+    ],
+    [
+      "islands",
+      "Islands & peninsulas",
+      "stone-waterfall-island"
+    ],
+    [
+      "worktops",
+      "Worktops",
+      "veined-stone-worktop"
+    ],
+    [
+      "sinks",
+      "Sinks & taps",
+      "steel-undermount-sink"
+    ],
+    [
+      "storage",
+      "Storage",
+      "pull-out-pantry"
+    ]
+  ],
+  "products": [
+    {
+      "slug": "the-emerald-room",
+      "name": "Forest Shaker Kitchen",
+      "category": "kitchens",
+      "style": "Contemporary",
+      "material": "Painted cabinetry",
+      "asset": "forest-shaker",
+      "finish": "Forest green",
+      "color": "#214638",
+      "description": "Framed green doors, brass-tone pulls and a light work surface in an L-shaped fitted kitchen arrangement."
+    },
+    {
+      "slug": "the-walnut-room",
+      "name": "Walnut Handleless Kitchen",
+      "category": "kitchens",
+      "style": "Modern",
+      "material": "Wood",
+      "asset": "walnut-handleless",
+      "finish": "Walnut tone",
+      "color": "#75513b",
+      "description": "A flat-front fitted kitchen with a walnut-tone finish and recessed handle lines. Layout and cabinetry are specified around your room."
+    },
+    {
+      "slug": "the-ivory-room",
+      "name": "Ivory Framed Kitchen",
+      "category": "kitchens",
+      "style": "Classic",
+      "material": "Painted cabinetry",
+      "asset": "ivory-framed",
+      "finish": "Warm ivory",
+      "color": "#d7cebd",
+      "description": "An ivory framed-door kitchen arrangement with a contrasting work surface and traditional pull handles."
+    },
+    {
+      "slug": "walnut-cabinetry",
+      "name": "Walnut Drawer Base Cabinet",
+      "category": "cabinetry",
+      "style": "Modern",
+      "material": "Wood",
+      "asset": "walnut-base-cabinet",
+      "finish": "Walnut tone",
+      "color": "#75513b",
+      "description": "A three-drawer base cabinet direction with continuous walnut-tone fronts. Internal fittings and dimensions require confirmation."
+    },
+    {
+      "slug": "sage-wall-cabinet",
+      "name": "Sage Glazed Wall Cabinet",
+      "category": "cabinetry",
+      "style": "Classic",
+      "material": "Painted cabinetry",
+      "asset": "sage-wall-cabinet",
+      "finish": "Sage green",
+      "color": "#8d9987",
+      "description": "A glazed double-door wall cabinet with a sage-painted frame and visible shelves. Discuss glazing and fixing requirements in your quote."
+    },
+    {
+      "slug": "ivory-tall-cabinet",
+      "name": "Ivory Tall Larder Cabinet",
+      "category": "cabinetry",
+      "style": "Contemporary",
+      "material": "Painted cabinetry",
+      "asset": "ivory-tall-cabinet",
+      "finish": "Warm ivory",
+      "color": "#d7cebd",
+      "description": "Full-height enclosed larder cabinetry in a soft ivory finish, with shelving shown as an illustrative arrangement."
+    },
+    {
+      "slug": "marble-at-dusk",
+      "name": "Stone Waterfall Island",
+      "category": "islands",
+      "style": "Contemporary",
+      "material": "Stone",
+      "asset": "stone-waterfall-island",
+      "finish": "Charcoal stone direction",
+      "color": "#484a45",
+      "description": "A freestanding island direction with a dark veined waterfall surface and concealed cabinetry. Stone selection and support need specification."
+    },
+    {
+      "slug": "oak-breakfast-island",
+      "name": "Oak Breakfast Island",
+      "category": "islands",
+      "style": "Modern",
+      "material": "Wood",
+      "asset": "oak-breakfast-island",
+      "finish": "Natural oak tone",
+      "color": "#b08c60",
+      "description": "An oak-tone kitchen island with storage and an overhanging breakfast surface. Seating clearances are planned around your room."
+    },
+    {
+      "slug": "ivory-peninsula",
+      "name": "Ivory Storage Peninsula",
+      "category": "islands",
+      "style": "Classic",
+      "material": "Painted cabinetry",
+      "asset": "ivory-peninsula",
+      "finish": "Warm ivory",
+      "color": "#d7cebd",
+      "description": "A framed-door peninsula direction with drawers, cupboards and a light work surface, designed to connect to an existing cabinet run."
+    },
+    {
+      "slug": "ivory-worktop-study",
+      "name": "Veined Stone Worktop",
+      "category": "worktops",
+      "style": "Classic",
+      "material": "Stone",
+      "asset": "veined-stone-worktop",
+      "finish": "Ivory veined stone direction",
+      "color": "#e5dfd4",
+      "description": "An ivory stone-look worktop direction with fine grey veining. Material grade, edge profile, templating and cut-outs are confirmed by quotation."
+    },
+    {
+      "slug": "charcoal-worktop",
+      "name": "Charcoal Stone Worktop",
+      "category": "worktops",
+      "style": "Contemporary",
+      "material": "Stone",
+      "asset": "charcoal-worktop",
+      "finish": "Charcoal stone direction",
+      "color": "#494b47",
+      "description": "A dark stone-look worktop direction with restrained mineral texture. Confirm the actual material, finish and maintenance requirements before ordering."
+    },
+    {
+      "slug": "oak-worktop",
+      "name": "Oak Block Worktop",
+      "category": "worktops",
+      "style": "Modern",
+      "material": "Wood",
+      "asset": "oak-worktop",
+      "finish": "Natural oak tone",
+      "color": "#b08c60",
+      "description": "A warm wood-block worktop direction with visible stave pattern. Species, coating, thickness and wet-area suitability require confirmation."
+    },
+    {
+      "slug": "sink-and-tap-study",
+      "name": "Steel Undermount Sink & Tap",
+      "category": "sinks",
+      "style": "Contemporary",
+      "material": "Metal",
+      "asset": "steel-undermount-sink",
+      "finish": "Brushed steel direction",
+      "color": "#a4aaa8",
+      "description": "A single-bowl undermount sink paired with an arched tap in a brushed-metal direction. Connections, cut-out and finish are confirmed by quotation."
+    },
+    {
+      "slug": "ceramic-apron-sink",
+      "name": "Ceramic Apron Sink & Tap",
+      "category": "sinks",
+      "style": "Classic",
+      "material": "Ceramic",
+      "asset": "ceramic-apron-sink",
+      "finish": "White ceramic direction",
+      "color": "#eeeae1",
+      "description": "A white apron-front sink paired with a bridge-style tap. Cabinet support, waste fittings and plumbing compatibility require confirmation."
+    },
+    {
+      "slug": "black-inset-sink",
+      "name": "Black Inset Sink & Tap",
+      "category": "sinks",
+      "style": "Modern",
+      "material": "Composite",
+      "asset": "black-inset-sink",
+      "finish": "Matt black direction",
+      "color": "#303430",
+      "description": "A dark inset sink with an integrated drainer and matching tap. Composition, bowl dimensions and fittings are subject to a confirmed specification."
+    },
+    {
+      "slug": "storage-study",
+      "name": "Pull-out Pantry Storage",
+      "category": "storage",
+      "style": "Modern",
+      "material": "Hardware",
+      "asset": "pull-out-pantry",
+      "finish": "Graphite hardware direction",
+      "color": "#686c65",
+      "description": "A tall pull-out pantry arrangement with accessible baskets. Load ratings, runner system and cabinet compatibility need supplier confirmation."
+    },
+    {
+      "slug": "corner-pull-out",
+      "name": "Corner Pull-out Shelves",
+      "category": "storage",
+      "style": "Contemporary",
+      "material": "Hardware",
+      "asset": "corner-pull-out",
+      "finish": "Steel hardware direction",
+      "color": "#a4aaa8",
+      "description": "A swing-out shelf arrangement for corner base cabinetry. Opening side, clearances and mechanism are confirmed during planning."
+    },
+    {
+      "slug": "drawer-organiser",
+      "name": "Oak Drawer Organiser",
+      "category": "storage",
+      "style": "Classic",
+      "material": "Wood",
+      "asset": "drawer-organiser",
+      "finish": "Natural oak tone",
+      "color": "#b08c60",
+      "description": "A compartmented wood-tone drawer insert for cutlery and utensils. Final compartment sizes and drawer fit are specified with your quotation."
+    }
+  ],
+  "stories": [
+    {
+      "slug": "the-emerald-room",
+      "title": "The Emerald Room",
+      "topic": "Colour & atmosphere",
+      "image": "/images/kitchen-emerald-v2.webp",
+      "alt": "Illustrative forest-green room with warm brass details",
+      "intro": "Deep green, soft daylight and a quiet sense of belonging.",
+      "heading": "Let the colour set the pace.",
+      "paragraphs": [
+        "A green kitchen can feel cocooning without feeling closed in. Balance the deeper cabinet tone with a lighter wall and keep the largest surfaces calm, so the room has space to breathe.",
+        "Before choosing a finish, look at samples in your own room at different times of day. Warm metal details and natural textures can soften the palette; a limited selection keeps the overall composition clear."
+      ],
+      "category": "kitchens"
+    },
+    {
+      "slug": "the-walnut-room",
+      "title": "The Walnut Room",
+      "topic": "Material stories",
+      "image": "/images/kitchen-walnut-v2.webp",
+      "alt": "Illustrative walnut kitchen with a warm natural palette",
+      "intro": "Wood grain, long lines and the warmth of an unhurried morning.",
+      "heading": "Give natural texture room to speak.",
+      "paragraphs": [
+        "Use the direction of wood grain to guide the eye. A continuous horizontal line can make a compact arrangement feel more settled, while taller panels can emphasise the height of a room.",
+        "Pair a strong wood texture with quieter surfaces. Collect samples together before deciding: the relationship between the wood tone, floor and worktop matters more than any single finish."
+      ],
+      "category": "cabinetry"
+    },
+    {
+      "slug": "the-ivory-room",
+      "title": "The Ivory Room",
+      "topic": "Light & palette",
+      "image": "/images/kitchen-ivory-v2.webp",
+      "alt": "Illustrative ivory room with soft daylight and framed cabinetry",
+      "intro": "A softer neutral, framed doors and light that moves through the day.",
+      "heading": "Build a neutral palette with depth.",
+      "paragraphs": [
+        "Ivory is a family of tones rather than a single colour. Put warm and cool samples next to your wall and floor finishes to see which combinations feel coherent in your actual light.",
+        "Framed doors introduce rhythm without a busy palette. Let shadow, texture and a small number of contrasting details provide the variation, rather than adding more colours."
+      ],
+      "category": "kitchens"
+    },
+    {
+      "slug": "marble-at-dusk",
+      "title": "Marble at Dusk",
+      "topic": "Material stories",
+      "image": "/images/kitchen-marble-dusk-v2.webp",
+      "alt": "Illustrative dark stone island in an atmospheric kitchen",
+      "intro": "A sculptural centrepiece, quiet stone and the changing evening light.",
+      "heading": "Choose where the room makes its statement.",
+      "paragraphs": [
+        "An island can act as the visual anchor of a kitchen. If its surface has pronounced veining, simplify the surrounding materials so that the pattern remains intentional.",
+        "Sketch the routes around the island before settling on its shape. Think about open appliance doors, places to pause and how a second person moves through the same space. A planner is a starting point; final clearances need a measured design."
+      ],
+      "category": "islands"
+    },
+    {
+      "slug": "water-and-warmth",
+      "title": "Water & Warmth",
+      "topic": "Everyday rituals",
+      "image": "/images/kitchen-sink-v2.webp",
+      "alt": "Illustrative sink area with warm metal details and a pale worktop",
+      "intro": "Making the most-used corner of the kitchen feel considered.",
+      "heading": "Plan around the everyday.",
+      "paragraphs": [
+        "Start with what happens around the sink: rinsing vegetables, washing pans, setting down a cup. Leave useful surface space nearby and think about where the dishwasher and waste storage belong.",
+        "A tap finish can connect the sink area to the rest of the room. Explore it alongside handles and lighting, then confirm the plumbing, care requirements and fitting details with your chosen specification."
+      ],
+      "category": "sinks"
+    },
+    {
+      "slug": "a-place-for-everything",
+      "title": "A Place for Everything",
+      "topic": "Living well",
+      "image": "/images/kitchen-storage-v2.webp",
+      "alt": "Illustrative organised kitchen storage and cabinet details",
+      "intro": "An easier room begins with understanding what you reach for.",
+      "heading": "Design from the inside out.",
+      "paragraphs": [
+        "List the things you use daily before deciding where cupboards go. Keep preparation tools near the work surface and occasional pieces away from the busiest routes.",
+        "Drawers, tall storage and corner fittings solve different problems. Consider how you reach, bend and move rather than filling every available space with a mechanism. Confirm fit and load requirements when the cabinetry is specified."
+      ],
+      "category": "storage"
+    }
+  ]
+}

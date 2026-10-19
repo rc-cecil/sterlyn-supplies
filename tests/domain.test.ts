@@ -1,0 +1,11 @@
+import {describe,it,expect} from 'vitest';
+import {allowed,totals,validPlacement,defaultScene,logoFrame,sceneSchema} from '../src/lib/domain';
+import {validSignature} from '../src/lib/commerce';
+import {createHmac} from 'node:crypto';
+describe('commerce boundaries',()=>{
+it('keeps minor units through tax and promotion calculations',()=>expect(totals(12345,10,1500,2500)).toEqual({subtotal:12345,discount:1235,tax:1667,shipping:2500,total:15277}));
+it('denies customers and limits staff roles',()=>{expect(allowed('customer','orders')).toBe(false);expect(allowed('catalogue','products')).toBe(true);expect(allowed('catalogue','orders')).toBe(false);expect(allowed('analyst','settings')).toBe(false);expect(allowed('owner','teams')).toBe(true);});
+it('rejects malformed or altered webhook signatures',()=>{const raw='{"event":"charge.success"}';const sig=createHmac('sha512','test-secret').update(raw).digest('hex');expect(validSignature(raw,sig,'test-secret')).toBe(true);expect(validSignature(raw+' ',sig,'test-secret')).toBe(false);expect(validSignature(raw,'bad','test-secret')).toBe(false);});
+});
+describe('planner',()=>{it('rejects overlapping units',()=>expect(validPlacement(defaultScene,{...defaultScene.modules[0],id:'new'})).toBe(false));it('rejects units beyond room boundaries',()=>expect(validPlacement(defaultScene,{...defaultScene.modules[0],id:'new',x:20,z:20})).toBe(false));it('accepts a free position',()=>expect(validPlacement(defaultScene,{...defaultScene.modules[0],id:'new',x:1.8,z:1.5})).toBe(true));it('rejects oversized scene payloads and unsafe colors',()=>{expect(sceneSchema.safeParse({...defaultScene,width:100}).success).toBe(false);expect(sceneSchema.safeParse({...defaultScene,modules:[{...defaultScene.modules[0],color:'url(evil)'}]}).success).toBe(false);});});
+describe('logo cycle',()=>{it('completes exactly one revolution and holds the front',()=>{expect(logoFrame(6).rotation).toBe(Math.PI*2);expect(logoFrame(9).rotation).toBe(Math.PI*2);});it('matches lighting and orientation at the loop seam',()=>{expect(logoFrame(0).light).toBe(logoFrame(10).light);expect(logoFrame(0).rotation).toBe(logoFrame(10).rotation);});it('illuminates after settling',()=>{expect(logoFrame(5).light).toBe(0);expect(logoFrame(8).light).toBe(1);});});

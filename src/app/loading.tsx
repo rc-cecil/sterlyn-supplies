@@ -1,0 +1,1 @@
+export default function Loading(){return <main className="page-wrap" aria-busy="true"><div className="skeleton-title"/><div className="skeleton-image"/><p role="status">Preparing your space…</p></main>;}

@@ -1,0 +1,5 @@
+FROM node:24-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+COPY scripts/media/processor.mjs /processor.mjs
+USER 1000:1000
+CMD ["node","/processor.mjs"]

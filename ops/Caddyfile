@@ -1,0 +1,11 @@
+{$STERLYN_DOMAIN} {
+ encode zstd gzip
+ request_body {
+  max_size 106MB
+ }
+ request_header -X-Forwarded-For
+ reverse_proxy web:3000 {
+  health_uri /api/ready
+  health_interval 30s
+ }
+}

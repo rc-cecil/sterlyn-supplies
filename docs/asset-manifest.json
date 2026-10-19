@@ -1,0 +1,135 @@
+[
+  {
+    "filename": "kitchen-marble-dusk.webp",
+    "category": "hero",
+    "dimensions": "834x465",
+    "usage": "Warm neutral, marble island, editorial use",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "kitchen-ivory.webp",
+    "category": "hero",
+    "dimensions": "832x465",
+    "usage": "Bright ivory with classic profile doors",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "kitchen-emerald.webp",
+    "category": "hero",
+    "dimensions": "834x465",
+    "usage": "Deep green, brass, dark stone kitchen",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "kitchen-walnut.webp",
+    "category": "hero",
+    "dimensions": "832x465",
+    "usage": "Warm walnut kitchen with linear lighting",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "collection-modern.webp",
+    "category": "collection",
+    "dimensions": "315x203",
+    "usage": "Modern kitchen editorial card",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "collection-classic.webp",
+    "category": "collection",
+    "dimensions": "301x203",
+    "usage": "Classic cream kitchen editorial card",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "collection-contemporary.webp",
+    "category": "collection",
+    "dimensions": "303x203",
+    "usage": "Contemporary charcoal kitchen editorial card",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-drawer-organizer.webp",
+    "category": "video-preview",
+    "dimensions": "286x201",
+    "usage": "Editorial/video teaser reference ONLY: AI concept board has embedded play overlay, not suitable as plain product photo",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-brass-tap.webp",
+    "category": "video-preview",
+    "dimensions": "296x201",
+    "usage": "Editorial/video teaser reference ONLY: AI concept board has embedded play overlay, not suitable as plain product photo",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-cabinet-front.webp",
+    "category": "thumbnail",
+    "dimensions": "154x148",
+    "usage": "Cabinet-front thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-marble-worktop.webp",
+    "category": "thumbnail",
+    "dimensions": "147x147",
+    "usage": "Worktop thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-sink-and-tap.webp",
+    "category": "thumbnail",
+    "dimensions": "172x147",
+    "usage": "Sink and brass tap thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-lighting.webp",
+    "category": "thumbnail",
+    "dimensions": "155x147",
+    "usage": "Pendant lighting thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-pull-out-storage.webp",
+    "category": "thumbnail",
+    "dimensions": "133x147",
+    "usage": "Smart storage thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "detail-oven.webp",
+    "category": "thumbnail",
+    "dimensions": "143x147",
+    "usage": "Built-in oven thumbnail",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "scene-3d-room-concept.webp",
+    "category": "concept",
+    "dimensions": "281x227",
+    "usage": "3D room planner visual direction, not production geometry",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "scene-designer-kitchen.webp",
+    "category": "collection",
+    "dimensions": "481x286",
+    "usage": "Editorial charcoal and cream kitchen",
+    "origin": "AI-generated concept imagery; not verified inventory"
+  },
+  {
+    "filename": "sterlyn-official-monogram-crop.webp",
+    "category": "brand",
+    "dimensions": "405x490",
+    "usage": "Crop of user-provided logo; verify visually before using",
+    "origin": "User-provided original logo; cropped, not AI redrawn"
+  },
+  {
+    "filename": "sterlyn-official-logo.jpg",
+    "category": "brand",
+    "dimensions": "1179x975",
+    "usage": "Official source of truth for logo",
+    "origin": "User-provided logo"
+  }
+]

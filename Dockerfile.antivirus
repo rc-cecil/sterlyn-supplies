@@ -1,0 +1,3 @@
+FROM clamav/clamav:1.4
+USER root
+RUN sed -i '/^StreamMaxLength /d; /^MaxFileSize /d; /^MaxScanSize /d; /^AlertExceedsMax /d' /etc/clamav/clamd.conf && printf '\nStreamMaxLength 100M\nMaxFileSize 100M\nMaxScanSize 150M\nAlertExceedsMax yes\n' >> /etc/clamav/clamd.conf

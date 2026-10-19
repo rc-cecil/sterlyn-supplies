@@ -1,0 +1,10 @@
+ALTER TABLE "Product" ADD COLUMN "trackStock" BOOLEAN NOT NULL DEFAULT false;
+UPDATE "Product" SET "trackStock"=true WHERE EXISTS (SELECT 1 FROM "Variant" WHERE "Variant"."productId"="Product".id AND ("Variant".stock<>0 OR "Variant".verified=true));
+ALTER TABLE "Category" ADD COLUMN "coverAssetId" TEXT;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_coverAssetId_fkey" FOREIGN KEY ("coverAssetId") REFERENCES "MediaAsset"(id) ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE TABLE "ProductPicture" (id TEXT PRIMARY KEY,"productId" TEXT NOT NULL,"assetId" TEXT,source TEXT NOT NULL,alt TEXT NOT NULL,position INTEGER NOT NULL);
+CREATE UNIQUE INDEX "ProductPicture_productId_position_key" ON "ProductPicture"("productId",position);
+CREATE INDEX "ProductPicture_assetId_idx" ON "ProductPicture"("assetId");
+ALTER TABLE "ProductPicture" ADD CONSTRAINT "ProductPicture_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"(id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProductPicture" ADD CONSTRAINT "ProductPicture_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "MediaAsset"(id) ON DELETE RESTRICT ON UPDATE CASCADE;
+INSERT INTO "ProductPicture" (id,"productId",source,alt,position) SELECT p.id || '-picture-' || g.ordinality,p.id,g.source,p.name,(g.ordinality-1)::integer FROM "Product" p CROSS JOIN LATERAL unnest(CASE WHEN cardinality(p.gallery)>0 THEN p.gallery ELSE ARRAY[p.image] END) WITH ORDINALITY g(source,ordinality);

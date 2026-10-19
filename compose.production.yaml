@@ -1,0 +1,104 @@
+# Standalone production configuration. No demo env files, capture mail or host database ports.
+x-application: &application
+  image: ${STERLYN_APP_IMAGE:?Set an immutable application image digest}
+  env_file: ${STERLYN_PRODUCTION_ENV:?Set the private production environment file path}
+  restart: unless-stopped
+  environment:
+    PUBLIC_LAUNCH: 'false'
+    READINESS_REQUIRE_MEDIA: 'true'
+  security_opt: [no-new-privileges:true]
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sterlyn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set production database password}
+      POSTGRES_DB: sterlyn
+    volumes: [postgres:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U sterlyn -d sterlyn]
+      interval: 5s
+      retries: 20
+  migrate:
+    <<: *application
+    restart: 'no'
+    environment:
+      PUBLIC_LAUNCH: 'false'
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set the private migration-owner connection separately}
+    command: node node_modules/prisma/build/index.js migrate deploy
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    <<: *application
+    command: node .next/standalone/server.js
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+  worker:
+    <<: *application
+    command: node --import tsx scripts/worker.ts
+    healthcheck:
+      test: [CMD, node, --import, tsx, --input-type=module, -e, "import {db} from './src/lib/db.ts';const r=await db.setting.findUnique({where:{key:'workerHeartbeat'}});await db.$$disconnect();process.exit(r?.value?.at && Date.now()-Date.parse(r.value.at)<60000 && r.value.processorReady ? 0 : 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+    volumes: [media_spool:/spool]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      antivirus: {condition: service_healthy}
+      processor: {condition: service_started}
+  storage:
+    image: ${STERLYN_STORAGE_IMAGE:?Set an immutable verified storage image digest}
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set private storage administrator user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set private storage administrator password}
+    volumes: [objects:/data]
+    restart: unless-stopped
+  processor:
+    image: ${STERLYN_PROCESSOR_IMAGE:?Set an immutable verified processor image digest}
+    network_mode: none
+    read_only: true
+    user: '1000:1000'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 768m
+    cpus: 2
+    tmpfs: ['/tmp:size=64m,mode=1777']
+    volumes: [media_spool:/spool]
+    restart: unless-stopped
+  antivirus:
+    image: ${STERLYN_ANTIVIRUS_IMAGE:?Set an immutable verified antivirus image digest}
+    mem_limit: 3g
+    cpus: 2
+    pids_limit: 128
+    volumes: [antivirus_definitions:/var/lib/clamav]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, clamdscan, --ping, '3']
+      interval: 30s
+      retries: 20
+  proxy:
+    image: caddy:2
+    environment:
+      STERLYN_DOMAIN: ${STERLYN_DOMAIN:?Set the approved domain}
+    ports: ['80:80','443:443']
+    volumes: [./ops/Caddyfile:/etc/caddy/Caddyfile:ro,caddy_data:/data,caddy_config:/config]
+    restart: unless-stopped
+volumes:
+  postgres:
+  objects:
+  antivirus_definitions:
+  caddy_data:
+  caddy_config:
+  media_spool:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=512m,uid=1000,gid=1000,mode=0700

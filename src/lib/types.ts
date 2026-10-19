@@ -1,0 +1,2 @@
+export type ProductView={pictures?:{source:string;alt:string}[];id:string;slug:string;name:string;description:string;style:string;material:string;image:string;gallery:string[];illustrative:boolean;featured:boolean;category:{slug:string;name:string};variants:{id:string;sku:string;name:string;color:string;price:number|null;verified:boolean;stock:number;image:string|null}[]};
+export type CartView={items:{id:string;quantity:number;variant:ProductView['variants'][number]&{product:Pick<ProductView,'name'|'image'|'slug'|'illustrative'>}}[]};

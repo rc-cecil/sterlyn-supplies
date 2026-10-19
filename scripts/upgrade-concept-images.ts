@@ -1,0 +1,5 @@
+import 'dotenv/config';
+import {db} from '../src/lib/db';
+// Updates only illustrative catalogue records still referencing the supplied low-resolution originals.
+const replacements:Record<string,string>={'/images/detail-sink-and-tap.webp':'/images/kitchen-sink-v2.webp','/images/detail-pull-out-storage.webp':'/images/kitchen-storage-v2.webp','/images/kitchen-walnut.webp':'/images/kitchen-walnut-v2.webp','/images/kitchen-ivory.webp':'/images/kitchen-ivory-v2.webp','/images/kitchen-marble-dusk.webp':'/images/kitchen-marble-dusk-v2.webp','/images/kitchen-emerald.webp':'/images/kitchen-emerald-v2.webp'};
+try{await db.$transaction(async tx=>{for(const p of await tx.product.findMany({where:{illustrative:true}})){const image=replacements[p.image]||p.image;const gallery=p.gallery.map(s=>replacements[s]||s);if(image!==p.image||gallery.some((s,i)=>s!==p.gallery[i]))await tx.product.update({where:{id:p.id},data:{image,gallery}});}});console.log('Illustrative image references upgraded; original assets retained.');}finally{await db.$disconnect();}

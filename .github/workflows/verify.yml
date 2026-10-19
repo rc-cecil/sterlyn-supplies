@@ -1,0 +1,55 @@
+name: Verify Sterlyn
+on: [push, pull_request]
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: sterlyn
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: sterlyn_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sterlyn -d sterlyn_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://sterlyn:test-only@localhost:5432/sterlyn_test
+      TEST_DATABASE_URL: postgresql://sterlyn:test-only@localhost:5432/sterlyn_test
+      BETTER_AUTH_URL: http://localhost:3002
+      PUBLIC_LAUNCH: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Ephemeral acceptance authentication secret
+        run: node --input-type=module -e 'import {appendFileSync} from "node:fs";import {randomBytes} from "node:crypto";appendFileSync(process.env.GITHUB_ENV,"BETTER_AUTH_SECRET="+randomBytes(48).toString("base64url")+"\n")'
+      - run: pnpm exec prisma generate
+      - run: pnpm db:migrate && pnpm db:seed
+      - run: pnpm typecheck && pnpm lint && pnpm test
+      - run: RUN_DATABASE_TESTS=true pnpm exec vitest run tests/operations.integration.test.ts
+      - run: pnpm exec tsx scripts/verify-migrations.ts
+      - run: pnpm exec tsx scripts/verify-runtime-role.ts
+      - run: pnpm audit --prod
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Acceptance journeys
+        run: |
+          pnpm exec tsx scripts/test-server.ts &
+          for attempt in $(seq 1 30); do curl -fsS http://localhost:3002/api/health && break || sleep 2; done
+          pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-evidence
+          path: |
+            test-results/
+            playwright-report/
+            out/release-evidence/

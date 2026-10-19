@@ -1,0 +1,11 @@
+import {createRequire} from 'node:module';
+import {copyFile,mkdir} from 'node:fs/promises';
+const require=createRequire(import.meta.url);
+const sharp=createRequire(require.resolve('next/package.json'))('sharp');
+const [source,name]=process.argv.slice(2);
+if(!source||!/^kitchen-[a-z-]+-v2$/.test(name))throw new Error('Provide source PNG and a kitchen-...-v2 name');
+await mkdir('references/generated',{recursive:true});
+await copyFile(source,`references/generated/${name}.png`);
+const metadata=await sharp(source).metadata();
+await sharp(source).webp({quality:92,effort:6}).toFile(`public/images/${name}.webp`);
+console.log(JSON.stringify({asset:name,width:metadata.width,height:metadata.height,upscaled:false}));

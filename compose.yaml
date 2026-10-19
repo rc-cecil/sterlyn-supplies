@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sterlyn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: sterlyn
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U sterlyn']
+      interval: 5s
+      retries: 10
+  storage:
+    build:
+      context: .
+      dockerfile: Dockerfile.storage
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?Set S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Set S3_SECRET_KEY}
+    volumes: [objects:/data]
+    ports: ['127.0.0.1:9000:9000','127.0.0.1:9001:9001']
+  mail:
+    image: axllent/mailpit:v1.27
+    ports: ['127.0.0.1:8025:8025']
+  web:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://sterlyn:${POSTGRES_PASSWORD}@db:5432/sterlyn
+      S3_ENDPOINT: http://storage:9000
+      SMTP_HOST: mail
+    ports: ['3000:3000']
+    depends_on:
+      db: {condition: service_healthy}
+    command: sh -c 'node node_modules/prisma/build/index.js migrate deploy && node .next/standalone/server.js'
+  worker:
+    volumes: [media_spool:/spool]
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://sterlyn:${POSTGRES_PASSWORD}@db:5432/sterlyn
+      S3_ENDPOINT: http://storage:9000
+      SMTP_HOST: mail
+      MEDIA_SPOOL: /spool
+      CLAMAV_HOST: antivirus
+    command: node --import tsx scripts/worker.ts
+    depends_on:
+      db: {condition: service_healthy}
+  antivirus:
+    build:
+      context: .
+      dockerfile: Dockerfile.antivirus
+    mem_limit: 3g
+    cpus: 2
+    pids_limit: 128
+    volumes: [antivirus_definitions:/var/lib/clamav]
+    networks: [default]
+    healthcheck:
+      test: [CMD, clamdscan, --ping, '3']
+      interval: 30s
+      timeout: 10s
+      retries: 10
+  processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.processor
+    network_mode: none
+    read_only: true
+    user: '1000:1000'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 768m
+    cpus: 2
+    tmpfs: ['/tmp:size=64m,mode=1777']
+    volumes: [media_spool:/spool]
+volumes:
+  antivirus_definitions:
+  media_spool:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=512m,uid=1000,gid=1000,mode=0700
+  postgres:
+  objects:

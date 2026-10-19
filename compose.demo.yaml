@@ -1,0 +1,30 @@
+# Local-only capture: no mail leaves this stack.
+services:
+  mail:
+    ports: !override ['127.0.0.1:8026:8025','127.0.0.1:1026:1025']
+  web:
+    volumes: [./prisma/migrations:/app/prisma/migrations:ro]
+    env_file: [.env, .local/demo.env]
+    ports: !override ['127.0.0.1:3100:3000']
+    environment:
+      BETTER_AUTH_URL: http://localhost:3100
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      SMTP_PORT: '1025'
+      SMTP_ALLOW_INSECURE_LOCAL: 'true'
+      SMTP_USER: ''
+      SMTP_PASSWORD: ''
+      MAIL_FROM: Sterlyn Demo <showroom@sterlyn.test>
+      STAFF_EMAIL: team@sterlyn.test
+      PUBLIC_LAUNCH: 'false'
+      READINESS_REQUIRE_MEDIA: 'true'
+  worker:
+    env_file: [.env, .local/demo.env]
+    environment:
+      BETTER_AUTH_URL: http://localhost:3100
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      SMTP_PORT: '1025'
+      SMTP_ALLOW_INSECURE_LOCAL: 'true'
+      SMTP_USER: ''
+      SMTP_PASSWORD: ''
+      MAIL_FROM: Sterlyn Demo <showroom@sterlyn.test>
+      STAFF_EMAIL: team@sterlyn.test
