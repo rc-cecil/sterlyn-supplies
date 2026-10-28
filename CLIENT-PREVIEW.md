@@ -16,3 +16,7 @@ The Netlify production environment can use `STERLYN_CLIENT_PREVIEW=true` to show
 5. Test all key workflows, especially checkout and administrative access.
 
 This preview is **not** a production-ready ecommerce launch. Do not share administrative credentials or confidential customer data with preview viewers.
+
+## Secure deployment setting
+
+Netlify requires a securely generated `BETTER_AUTH_SECRET` in production even while login is disabled in the preview. Keep this value secret and outside source control. This is independent of the later database migration.
