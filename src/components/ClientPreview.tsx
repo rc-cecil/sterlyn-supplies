@@ -9,7 +9,7 @@ import PreviewHeader from './PreviewHeader';
 import Designer from '@/components/Designer';
 import { catalogueCategories, catalogueProducts, productImage } from '@/lib/catalogue-content';
 import { AddEnquiryButton, ContactPage, EnquiryBagPage } from './ShowcaseEnquiry';
-import { enquiryUrl } from '@/lib/enquiry';
+import { enquiryUrl, BUSINESS_FACEBOOK } from '@/lib/enquiry';
 
 /** Database-free preview using the catalogue's actual separate product image assets. */
 type CatalogueItem = (typeof catalogueProducts)[number];
@@ -100,6 +100,6 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
       <strong>STERLYN · CLIENT PREVIEW</strong><span>Browse concepts, collect enquiry items and contact us on WhatsApp. No checkout, prices or online payments.</span>
     </aside>
     <main id="main">{content}</main>
-    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore our product images and 2D/3D planner. Send selected products and inspirations to the Sterlyn team through WhatsApp; checkout and payments are unavailable.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Product showcase · Enquiries only</span><span>WhatsApp: +44 7576 899618</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
+    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore our product images and 2D/3D planner. Send selected products and inspirations to the Sterlyn team through WhatsApp; checkout and payments are unavailable.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link><p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Visit our Facebook page ↗</a></p></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Product showcase · Enquiries only</span><span>WhatsApp: +44 7576 899618</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
   </>;
 }
