@@ -67,6 +67,16 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
   useEffect(()=>{
     setOrigin(window.location.origin);
     const params=new URLSearchParams(window.location.search);
+    if(params.get('design')==='1'){
+      try{
+        const saved=JSON.parse(localStorage.getItem('sterlyn-scene')||'null');
+        if(saved&&typeof saved.width==='number'&&typeof saved.depth==='number'&&typeof saved.height==='number'){
+          const modules=Array.isArray(saved.modules)?saved.modules:[];
+          const kinds=modules.slice(0,30).map((m:{kind?:string})=>m.kind||'unit').join(', ');
+          setDesignSummary('Room: '+saved.width+' x '+saved.depth+' x '+saved.height+' m; Floor: '+String(saved.floor||'not set')+'; Wall: '+String(saved.wall||'not set')+'; Worktop: '+String(saved.worktop||'not set')+'; Modules ('+modules.length+'): '+kinds);
+        }
+      }catch{}
+    }
     const incoming=selectedFromLink(params);
     const saved=readSelection();
     const uniqueIncoming=incoming.filter(item=>!saved.some(previous=>previous.kind===item.kind&&previous.slug===item.slug&&previous.detail===item.detail));
