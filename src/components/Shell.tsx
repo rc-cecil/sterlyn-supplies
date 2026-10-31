@@ -44,7 +44,7 @@ export function Footer(){
           <Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20}/></Link>
         </div>
         <div>
-          <span className="eyebrow">LET'S TALK</span>
+          <span className="eyebrow">LET’S TALK</span>
           <p>Explore our collections, save your ideas and request a quotation directly. No checkout or payments on this website.</p>
           <p><a className="text-link" href={'https://wa.me/'+BUSINESS_WHATSAPP} target="_blank" rel="noopener noreferrer">WhatsApp: {BUSINESS_PHONE} ↗</a></p>
           <p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Follow us on Facebook ↗</a></p>
