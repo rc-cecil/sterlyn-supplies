@@ -7,7 +7,7 @@ import { InspirationArticle, InspirationIndex } from '@/components/Inspiration';
 import { inspirationStories } from '@/lib/inspiration';
 import PreviewHeader from './PreviewHeader';
 import Designer from '@/components/Designer';
-import ContactPage from '@/components/ContactPage';
+import ContactPage,{AddToEnquiryButton} from '@/components/ContactPage';
 import { catalogueCategories, catalogueProducts, productImage } from '@/lib/catalogue-content';
 
 /** Database-free preview using the catalogue's actual separate product image assets. */
@@ -19,7 +19,7 @@ function PreviewProductCards({items,featured=false}:{items:readonly CatalogueIte
       <Image src={productImage(item.asset)} alt={item.name+' — illustrative product preview'} fill sizes="(max-width: 700px) 100vw, 45vw"/>
       <span className="image-tag">ILLUSTRATIVE PRODUCT</span><span className="image-arrow"><ArrowUpRight size={20}/></span>
     </Link>
-    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3></div><Link className="text-link" href={"/contact?product="+encodeURIComponent(item.slug)}>Request a quote <ArrowUpRight size={15}/></Link></div>
+    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3></div><div><Link className="text-link" href={"/contact?product="+encodeURIComponent(item.slug)}>Request a quote <ArrowUpRight size={15}/></Link><AddToEnquiryButton slug={item.slug} name={item.name} finish={item.finish}/></div></div>
   </article>)}</div>;
 }
 
@@ -52,7 +52,7 @@ function ProductPreview({slug}:{slug:string}){
       <h1>{product.name}</h1><p className="lede">{product.description}</p><p className="asset-note" style={{margin:"25px 0"}}>Specifications and availability are discussed directly with Sterlyn.</p>
       <p><strong>Material direction:</strong> {product.material}</p><p><strong>Illustrated finish:</strong> {product.finish}</p>
       <p>Explore sample layouts in the Design Studio, or enquire about this item directly.</p>
-      <Link href={"/contact?product="+encodeURIComponent(product.slug)} className="button">Request a quote <ArrowUpRight size={18}/></Link>
+      <Link href={"/contact?product="+encodeURIComponent(product.slug)} className="button">Request a quote <ArrowUpRight size={18}/></Link><AddToEnquiryButton slug={product.slug} name={product.name} finish={product.finish}/>
       <Link href="/design-studio" className="button">Explore the Design Studio <ArrowUpRight size={18}/></Link>
       <p style={{marginTop:28}}><Link className="text-link" href={'/collections/'+product.category}>← Back to {category?.[1]}</Link></p>
     </div></div></section>;
@@ -97,6 +97,6 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
       <strong>STERLYN · CLIENT PREVIEW</strong><span>Illustrative showroom · Direct WhatsApp enquiries · No online checkout or customer accounts.</span>
     </aside>
     <main id="main">{content}</main>
-    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Learn about enquiries <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore collections and send selected products to Sterlyn via WhatsApp. Domain email is coming soon; customer accounts and checkout are not active in this preview.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Concept showroom · Direct enquiries only</span><span>Ghana · GHS</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
+    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Learn about enquiries <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore collections and send selected products to Sterlyn via WhatsApp. Domain email is coming soon; customer accounts and checkout are not active in this preview.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link><p style={{marginTop:18,fontSize:12}}><a href="https://wa.me/447576899618" target="_blank" rel="noopener noreferrer">WhatsApp · +44 7576 899618 ↗</a></p><p style={{marginTop:8,fontSize:12}}><a href="https://www.facebook.com/61595476006250/?hpir=1" target="_blank" rel="noopener noreferrer">Follow Sterlyn on Facebook ↗</a></p></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Concept showroom · Direct enquiries only</span><span>Ghana · GHS</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
   </>;
 }
