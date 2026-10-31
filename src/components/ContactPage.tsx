@@ -59,10 +59,12 @@ export function AddToEnquiryButton({slug,name,finish}:{slug:string;name:string;f
 export default function ContactPage({preview=false}:{preview?:boolean}){
   const [items,setItems]=useState<Selection[]>([]);
   const [loaded,setLoaded]=useState(false);
+  const [origin,setOrigin]=useState('https://sterlynsupplies.netlify.app');
   const [name,setName]=useState('');
   const [notes,setNotes]=useState('');
   const [loadingBag,setLoadingBag]=useState(false);
   useEffect(()=>{
+    setOrigin(window.location.origin);
     const params=new URLSearchParams(window.location.search);
     const incoming=selectedFromLink(params);
     const saved=readSelection();
@@ -82,7 +84,8 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
           url:'/products/'+item.variant.product.slug,quantity:item.quantity,detail:item.variant.name
         }));
         setItems(current=>{
-          const merged=mergeItems(current,fromBag);
+          const withoutDuplicates=current.filter(item=>!fromBag.some(from=>from.kind===item.kind&&from.slug===item.slug&&from.detail===item.detail));
+          const merged=mergeItems(withoutDuplicates,fromBag);
           localStorage.setItem(selectionKey,JSON.stringify(merged));
           return merged;
         });
@@ -91,7 +94,7 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
   },[preview]);
   function updateItems(next:Selection[]){setItems(next);localStorage.setItem(selectionKey,JSON.stringify(next));}
   const summary=items.map((item,i)=>{
-    const siteLink='https://sterlynsupplies.netlify.app'+item.url;
+    const siteLink=origin+item.url;
     return `${i+1}. ${item.name} (${item.kind})${item.detail?', '+item.detail:''}${item.quantity>1?', quantity '+item.quantity:''}\n   ${siteLink}`;
   }).join('\n');
   const message=[
