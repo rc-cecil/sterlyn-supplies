@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {db} from '../src/lib/db';
 const base='http://127.0.0.1:3000';
 const email=`quote-check-${randomUUID()}@sterlyn.test`,password=randomUUID()+randomUUID();
-let id='';let quoteId='';
+let id='';const quoteId='';
 try{
  const post=(path:string,body:unknown,cookie='')=>fetch(base+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:base,Cookie:cookie},body:JSON.stringify(body)});
  let r=await post('auth/sign-up/email',{email,password,name:'Quote workflow check'});assert.equal(r.status,200,await r.text());
