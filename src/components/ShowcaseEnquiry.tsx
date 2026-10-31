@@ -87,6 +87,7 @@ export function ContactPage() {
     const params = new URLSearchParams(window.location.search);
     setDirect(readDirectEnquiry(params));
     setFromBag(params.get('basket') === '1');
+    setNotes((params.get('notes') || '').slice(0, 3000));
   }, []);
   const selected = useMemo(() => {
     if (!direct && !fromBag) return [] as EnquiryItem[];
