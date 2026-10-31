@@ -14,7 +14,8 @@ import {allowed} from '@/lib/domain';
 import {Header,Footer} from '@/components/Shell';
 import Hero from '@/components/Hero';
 import {ProductCard,Catalogue,ProductDetail} from '@/components/Catalogue';
-import {CartPage,AccountPage,PasswordReset,Confirmation} from '@/components/CommerceViews';
+import {AccountPage,PasswordReset,Confirmation} from '@/components/CommerceViews';
+import {ContactPage,EnquiryBagPage} from '@/components/ShowcaseEnquiry';
 import Designer from '@/components/Designer';
 import InvoiceDocument from '@/components/InvoiceDocument';
 import Admin from '@/components/Admin';
@@ -32,7 +33,8 @@ if(route==='home')content=await Home();
 else if(route==='collections'){const categories=await db.category.findMany({include:{_count:{select:{products:{where:{status:'published'}}}}},orderBy:{name:'asc'}});const category=slug[1]||search.category;const where={status:'published',...(category?{category:{slug:category}}:{}),...(search.style?{style:search.style}:{}),...(search.material?{material:search.material}:{}),...(search.q?{OR:[{name:{contains:search.q,mode:'insensitive' as const}},{description:{contains:search.q,mode:'insensitive' as const}}]}:{})};const [products,total]=await Promise.all([db.product.findMany({where,include,take:12,skip:(Math.max(1,Number(search.page)||1)-1)*12,orderBy:search.sort==='name'?[{name:'asc'},{id:'asc'}]:search.sort==='newest'?[{createdAt:'desc'},{id:'asc'}]:[{featured:'desc'},{name:'asc'},{id:'asc'}]}),db.product.count({where})]);content=<section className="page-wrap"><PageIntro tag={route==='collections'?'THE COLLECTIONS':'KITCHENS & CONSIDERED DETAILS'} title={category?categories.find(c=>c.slug===category)?.name||'The collection':'Considered pieces. Complete kitchens.'} description="Browse fitted kitchens, cabinetry and the pieces that complete a room. Product previews are illustrative; specifications and availability are confirmed by quotation."/>{route==='collections'&&!category&&<div className="category-tabs">{categories.map(c=><Link href={'/collections/'+c.slug} key={c.id}><span className="category-picture"><Image unoptimized={c.image.startsWith('/api/media/')} src={c.image} alt="" fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{c.name}<small>{c._count.products} products</small></span><ArrowUpRight size={16}/></Link>)}</div>}<Catalogue products={products} total={total} categories={categories} activeCategory={category}/></section>;}
 else if(route==='products'&&slug[1]){const product=await db.product.findFirst({where:{slug:slug[1],status:'published'},include});if(!product)notFound();content=<section className="page-wrap"><nav className="breadcrumbs"><Link href="/">Home</Link><span>/</span><Link href="/collections">Collection</Link><span>/</span><span>{product.name}</span></nav><ProductDetail product={product as ProductView}/></section>;}
 else if(route==='design-studio')content=<Designer/>;
-else if(route==='cart'||route==='checkout')content=<CartPage checkout={route==='checkout'}/>;
+else if(route==='cart'||route==='checkout')content=<EnquiryBagPage/>;
+else if(route==='contact')content=<ContactPage/>;
 else if(route==='invoices'&&slug[1])content=<InvoiceDocument id={slug[1]}/>;
 else if(route==='account')content=slug[1]==='reset-password'?<PasswordReset/>:<AccountPage section={slug[1]}/>;
 else if(route==='order-confirmation'&&slug[1])content=<Confirmation id={slug[1]}/>;
