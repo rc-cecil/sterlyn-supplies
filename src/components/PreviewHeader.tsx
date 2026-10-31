@@ -8,6 +8,7 @@ const links = [
   ['/collections', 'Our collections'],
   ['/inspiration', 'Inspiration'],
   ['/about', 'Our story'],
+  ['/contact', 'Contact us'],
 ] as const;
 
 export default function PreviewHeader() {
