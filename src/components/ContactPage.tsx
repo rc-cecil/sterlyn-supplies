@@ -60,6 +60,7 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
   const [items,setItems]=useState<Selection[]>([]);
   const [loaded,setLoaded]=useState(false);
   const [origin,setOrigin]=useState('https://sterlynsupplies.netlify.app');
+  const [designSummary,setDesignSummary]=useState('');
   const [name,setName]=useState('');
   const [notes,setNotes]=useState('');
   const [loadingBag,setLoadingBag]=useState(false);
