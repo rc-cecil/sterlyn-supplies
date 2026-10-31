@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Menu, Search, X, ArrowUpRight } from 'lucide-react';
+import { Menu, Search, X, ArrowUpRight, UserRound } from 'lucide-react';
 import { EnquiryBasketLink } from './ShowcaseEnquiry';
 import { BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP } from '@/lib/enquiry';
 
@@ -21,11 +21,13 @@ export function Header(){
         {[['/collections','Our collections'],['/inspiration','Inspiration'],['/about','Our story'],['/contact','Contact us']].map(([href,label])=>
           <Link key={href} href={href} className={path===href?'active':''}>{label}</Link>)}
         <Link href="/design-studio" className="mobile-studio">Design your space <ArrowUpRight size={16}/></Link>
+        <Link href="/account/profile" className="mobile-studio">Your profile <ArrowUpRight size={16}/></Link>
         <Link href="/cart" className="mobile-studio">Your enquiry list <ArrowUpRight size={16}/></Link>
       </nav>
       <div className="nav-actions">
         <Link className="nav-studio" href="/design-studio">Design your space <ArrowUpRight size={15}/></Link>
         <Link href="/collections" className="icon-button" aria-label="Search catalogue"><Search size={19}/></Link>
+        <Link href="/account/profile" className="icon-button" aria-label="Your profile"><UserRound size={19}/></Link>
         <EnquiryBasketLink className="icon-button bag-button"/>
         <button type="button" className="icon-button menu-toggle" aria-label={menu?'Close menu':'Open menu'} aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
       </div>

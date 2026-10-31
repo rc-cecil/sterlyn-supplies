@@ -1,8 +1,11 @@
 import {test,expect} from '@playwright/test';
+// Verify layout using the animated fallback, isolating geometry from software WebGL cost.
+test.use({launchOptions:{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||(process.platform==='darwin'?'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome':undefined),args:['--disable-webgl']}});
 test('hero headline and image keep a compact, clear gap across screen sizes',async({page})=>{
  test.setTimeout(90000);
+ await page.goto('/',{waitUntil:'domcontentloaded'});
  for(const size of [{width:1920,height:1080},{width:1440,height:800},{width:1024,height:768},{width:390,height:844},{width:375,height:667}]){
-  await page.setViewportSize(size);await page.goto('/');
+  await page.setViewportSize(size);await page.evaluate(()=>window.scrollTo(0,0));
   await page.getByRole('heading',{name:'The art of a better kitchen.'}).waitFor();
   await page.evaluate(()=>document.fonts.ready);
   await expect(page.locator('.hero-expand .sticky')).toHaveCSS('height',size.height+'px',{timeout:30000});
