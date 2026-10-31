@@ -112,6 +112,7 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
     'Hello Sterlyn Supplies,',
     name.trim()?'My name is '+name.trim().slice(0,100)+'.':'',
     items.length?'I would like a quotation or further information about:\n'+summary:'I would like to make an enquiry about your kitchen products and services.',
+    designSummary?'Design Studio layout: '+designSummary:'',
     notes.trim()?'Additional details: '+notes.trim().slice(0,1500):'',
     'Please let me know the next steps. Thank you.'
   ].filter(Boolean).join('\n\n');
@@ -124,6 +125,7 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
       <div className="sterlyn-contact-main">
         <span className="eyebrow">YOUR ENQUIRY</span>
         <h2>What caught your eye?</h2>
+        {designSummary&&<p className="sterlyn-contact-empty"><strong>Selected Design Studio layout</strong><br/>{designSummary}</p>}
         {loaded&&items.length>0?<div className="sterlyn-selection" aria-label="Selected quotation items">
           {items.map((item,i)=><article key={item.kind+item.slug+item.detail}>
             <div><span className="eyebrow">{item.kind==='product'?'COLLECTION':'INSPIRATION'}</span>
