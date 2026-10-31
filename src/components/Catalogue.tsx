@@ -6,7 +6,7 @@ import {ProductActions} from './ProductActions';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter,useSearchParams } from 'next/navigation';
-import { Heart,SlidersHorizontal,ArrowUpRight,Search,Plus,Minus } from 'lucide-react';
+import { Heart,SlidersHorizontal,ArrowUpRight,Search } from 'lucide-react';
 import type {ProductView} from '@/lib/types';
 import {api,Modal} from './ui';
 export function ProductCard({product:p,index=0}:{product:ProductView;index?:number}){const [saved,setSaved]=useState(false),[message,setMessage]=useState('');async function wish(){try{const r=await api<{saved:boolean}>('wishlist',{productId:p.id});setSaved(r.saved);setMessage(r.saved?'Saved to wishlist':'Removed from wishlist');}catch(e){setMessage((e as Error).message);}}return <article className="product-card"><Link href={'/products/'+p.slug} className="product-image"><Image unoptimized={p.image.startsWith('/api/media/')} src={p.image} alt={p.pictures?.find(picture=>picture.source===p.image)?.alt||p.name} fill sizes="(max-width: 700px) 100vw, 45vw"/><span className="image-tag">{p.illustrative?'Illustrative product':p.category.name}</span><span className="image-arrow"><ArrowUpRight size={23}/></span></Link><button className={'wishlist '+(saved?'saved':'')} onClick={wish} aria-label={'Save '+p.name}><Heart size={18} fill={saved?'currentColor':'none'}/></button><div className="product-caption"><div><small>{p.style} · {p.material}</small><h3><Link href={'/products/'+p.slug}>{p.name}</Link></h3></div><span className="product-price">Enquire for details</span></div><ProductActions product={p}/><span className="sr-only">Product {index+1}</span>{message&&<p className="form-message" role="status">{message}</p>}</article>;}
