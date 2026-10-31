@@ -70,7 +70,7 @@ export function EnquiryBagPage() {
           <button type="button" onClick={() => change(item, 0)} aria-label={'Remove ' + item.name}><Trash2 size={17} /></button>
         </div>
       </article>)}</div>
-      <div className="enquiry-next"><p>Your enquiry will include each selected item's name, quantity and website link.</p>
+      <div className="enquiry-next"><p>Your enquiry will include each selected item’s name, quantity and website link.</p>
         <Link className="button" href="/contact?basket=1">Request a quotation on WhatsApp <ArrowUpRight size={17} /></Link></div>
     </> : <div className="empty"><h2>No selections yet.</h2><p>Browse the collections or inspiration journal and add ideas you like.</p>
       <Link className="button" href="/collections">Explore the collections <ArrowUpRight size={18} /></Link></div>}
@@ -104,14 +104,14 @@ export function ContactPage() {
 
   return <section className="page-wrap enquiry-page">
     <div className="page-heading"><span className="eyebrow">CONTACT STERLYN SUPPLIES</span>
-      <h1>Let's talk about your space.</h1>
+      <h1>Let’s talk about your space.</h1>
       <p>Tell us what you have in mind. Our team can discuss design options, availability, specifications and quotations directly with you.</p>
     </div>
     <div className="enquiry-contact-grid">
       <div className="enquiry-contact-main">
         <span className="eyebrow">YOUR ENQUIRY</span>
         {selected.length ? <>
-          <h2>What you're enquiring about</h2>
+          <h2>What you’re enquiring about</h2>
           <ol className="enquiry-selection">{selected.map(item => <li key={enquiryKey(item)}>
             <strong>{item.name}</strong><span>{item.type === 'product' ? 'Product' : 'Inspiration'}
               {item.finish ? ' · ' + item.finish : ''} · Quantity {item.quantity}</span>
