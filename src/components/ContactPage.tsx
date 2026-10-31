@@ -47,6 +47,15 @@ function selectedFromLink(search:URLSearchParams):Selection[] {
   }
   return result;
 }
+export function AddToEnquiryButton({slug,name,finish}:{slug:string;name:string;finish?:string}){
+ const [added,setAdded]=useState(false);
+ function add(){
+   const item:Selection={kind:'product',slug,name,url:'/products/'+slug,quantity:1,detail:finish};
+   localStorage.setItem(selectionKey,JSON.stringify(mergeItems(readSelection(),[item])));
+   setAdded(true);
+ }
+ return <button type="button" className="text-link sterlyn-save-selection" onClick={add}>{added?'Added to your enquiry':'Add to enquiry list'} <ArrowUpRight size={16}/></button>;
+}
 export default function ContactPage({preview=false}:{preview?:boolean}){
   const [items,setItems]=useState<Selection[]>([]);
   const [loaded,setLoaded]=useState(false);
@@ -57,7 +66,8 @@ export default function ContactPage({preview=false}:{preview?:boolean}){
     const params=new URLSearchParams(window.location.search);
     const incoming=selectedFromLink(params);
     const saved=readSelection();
-    const next=mergeItems(saved,incoming);
+    const uniqueIncoming=incoming.filter(item=>!saved.some(previous=>previous.kind===item.kind&&previous.slug===item.slug&&previous.detail===item.detail));
+    const next=mergeItems(saved,uniqueIncoming);
     setItems(next);
     localStorage.setItem(selectionKey,JSON.stringify(next));
     setLoaded(true);
