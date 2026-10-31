@@ -7,6 +7,7 @@ import { InspirationArticle, InspirationIndex } from '@/components/Inspiration';
 import { inspirationStories } from '@/lib/inspiration';
 import PreviewHeader from './PreviewHeader';
 import Designer from '@/components/Designer';
+import ContactPage from '@/components/ContactPage';
 import { catalogueCategories, catalogueProducts, productImage } from '@/lib/catalogue-content';
 
 /** Database-free preview using the catalogue's actual separate product image assets. */
@@ -18,7 +19,7 @@ function PreviewProductCards({items,featured=false}:{items:readonly CatalogueIte
       <Image src={productImage(item.asset)} alt={item.name+' — illustrative product preview'} fill sizes="(max-width: 700px) 100vw, 45vw"/>
       <span className="image-tag">ILLUSTRATIVE PRODUCT</span><span className="image-arrow"><ArrowUpRight size={20}/></span>
     </Link>
-    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3></div><span className="product-price">Quote at launch</span></div>
+    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3></div><Link className="text-link" href={"/contact?product="+encodeURIComponent(item.slug)}>Request a quote <ArrowUpRight size={15}/></Link></div>
   </article>)}</div>;
 }
 
@@ -26,7 +27,7 @@ function CollectionsPreview({categorySlug}:{categorySlug?:string}){
   const category=catalogueCategories.find(([slug])=>slug===categorySlug);
   const products=categorySlug?catalogueProducts.filter(item=>item.category===categorySlug):catalogueProducts;
   return <section className="page-wrap">
-    <PreviewIntro tag="THE COLLECTIONS · CLIENT PREVIEW" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate illustrative product previews by category. Inspiration remains an independent design journal. Live inventory, prices and quotations are not connected."/>
+    <PreviewIntro tag="THE COLLECTIONS · CLIENT PREVIEW" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Explore our kitchen concepts and individual product directions. Discuss your ideas and request quotations directly on WhatsApp."/>
     {!categorySlug&&<nav aria-label="Collection categories" className="category-tabs">{catalogueCategories.map(([slug,name,asset])=><Link href={'/collections/'+slug} key={slug}>
       <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>3 product directions</small></span><ArrowUpRight size={16}/>
     </Link>)}</nav>}
@@ -48,9 +49,10 @@ function ProductPreview({slug}:{slug:string}){
       <p className="asset-note">Illustrative product image, not verified stocked merchandise or a completed installation.</p>
     </div><div className="product-info">
       <Link className="eyebrow" href={'/collections/'+product.category}>{category?.[1]} / {product.style}</Link>
-      <h1>{product.name}</h1><p className="lede">{product.description}</p><div className="detail-price">Specified and quoted at launch.</div>
+      <h1>{product.name}</h1><p className="lede">{product.description}</p><p className="asset-note" style={{margin:"25px 0"}}>Specifications and availability are discussed directly with Sterlyn.</p>
       <p><strong>Material direction:</strong> {product.material}</p><p><strong>Illustrated finish:</strong> {product.finish}</p>
-      <p>Explore sample layouts in the Design Studio. Stock, checkout and quotation submission are disabled in this preview.</p>
+      <p>Explore sample layouts in the Design Studio, or enquire about this item directly.</p>
+      <Link href={"/contact?product="+encodeURIComponent(product.slug)} className="button">Request a quote <ArrowUpRight size={18}/></Link>
       <Link href="/design-studio" className="button">Explore the Design Studio <ArrowUpRight size={18}/></Link>
       <p style={{marginTop:28}}><Link className="text-link" href={'/collections/'+product.category}>← Back to {category?.[1]}</Link></p>
     </div></div></section>;
@@ -87,14 +89,14 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
   }
   else if (route === 'about') content = <section className="page-wrap"><PreviewIntro tag="OUR STORY" title="Considered spaces. Everyday living." description="Sterlyn Supplies Limited is a kitchen furniture and supplies brand. Explore our concept collection, shape your ideas and imagine the possibilities for your space." /><div className="studio-promo" style={{marginTop: 50}}><div className="studio-promo-image"><Image src="/images/kitchen-emerald-v2.webp" fill alt="Illustrative emerald kitchen concept" sizes="(max-width: 700px) 100vw, 60vw" /></div><div className="studio-promo-copy"><h2>Style. Quality.<br/><em>Innovation.</em></h2><p>The imagery is illustrative. Materials, availability and final specifications are confirmed during quotation.</p><Link className="text-link" href="/inspiration">Explore our perspectives <ArrowUpRight size={18} /></Link></div></div></section>;
   else if (route === 'design-studio') content = <Designer preview/>;
-  else if (route === 'contact') content = <section className="page-wrap narrow"><PreviewIntro tag="CONTACT · PREVIEW" title="Let’s talk about your space." description="The live enquiry form is not enabled in this view-only preview. Contact and quotation functionality will be available when the store launches." /><p style={{marginTop: 30}}>For now, explore the concept collection and discuss your preferred designs with the Sterlyn team directly.</p><Link href="/collections" className="button" style={{marginTop: 25}}>Browse concepts <ArrowUpRight size={18} /></Link></section>;
+  else if (route === 'contact') content = <ContactPage preview/>;
   else content = <section className="page-wrap narrow"><PreviewIntro tag="CLIENT PREVIEW" title="Coming in the full storefront." description="This feature is not available in the view-only client preview. The live application and administrative features remain unchanged." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
   return <>
     <PreviewHeader />
     <aside aria-label="Preview notice" style={{padding: '12px 6%', background: '#eadfc9', color: '#163327', display: 'flex', flexWrap: 'wrap', gap: '8px 18px', justifyContent: 'center', textAlign: 'center', fontSize: 12}}>
-      <strong>STERLYN · CLIENT PREVIEW</strong><span>Interactive room planner and illustrative product catalogue. Accounts, checkout, quotations and admin tools are not active.</span>
+      <strong>STERLYN · CLIENT PREVIEW</strong><span>Illustrative showroom · Direct WhatsApp enquiries · No online checkout or customer accounts.</span>
     </aside>
     <main id="main">{content}</main>
-    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Learn about enquiries <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore distinct illustrative product images and design your room. Your room layout saves only in this browser; live accounts and business operations are disconnected.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Illustrative product previews · Not a live store</span><span>Ghana · GHS</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
+    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Learn about enquiries <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore collections and send selected products to Sterlyn via WhatsApp. Domain email is coming soon; customer accounts and checkout are not active in this preview.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Concept showroom · Direct enquiries only</span><span>Ghana · GHS</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
   </>;
 }
