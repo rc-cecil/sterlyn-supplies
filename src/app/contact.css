@@ -1,0 +1,28 @@
+/* Direct-enquiry showroom: complements the existing Sterlyn visual system. */
+.sterlyn-contact-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:clamp(28px,5vw,90px);align-items:start}
+.sterlyn-contact-main{min-width:0}
+.sterlyn-contact-main>h2,.sterlyn-contact-methods>h2{font-size:clamp(35px,4vw,54px);margin:17px 0 27px}
+.sterlyn-contact-methods{background:#ebece2;padding:clamp(24px,3.4vw,44px);border:1px solid var(--line)}
+.sterlyn-contact-method{display:flex;align-items:center;gap:17px;padding:20px 0;border-top:1px solid #cbd1c4}
+.sterlyn-contact-method>span{flex:1;min-width:0}
+.sterlyn-contact-method strong,.sterlyn-contact-method small{display:block}
+.sterlyn-contact-method strong{font-size:13px;font-weight:600}
+.sterlyn-contact-method small{font-size:10px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+.sterlyn-contact-method.pending{color:#6c7467;cursor:default}
+.sterlyn-contact-methods>.asset-note{margin-top:30px}
+.sterlyn-contact-form{display:grid;gap:18px;margin:35px 0 0;border-top:1px solid var(--line);padding-top:30px}
+.sterlyn-contact-form .field>span{font-size:12px}
+.sterlyn-contact-form textarea{min-height:150px}
+.sterlyn-contact-form>.button{justify-content:space-between;max-width:460px}
+.sterlyn-whatsapp-button{background:#1a6b45}
+.sterlyn-whatsapp-button:hover{background:#145335}
+.sterlyn-contact-empty{background:#eaece1;color:var(--muted);font-size:13px;padding:24px;margin-bottom:18px}
+.sterlyn-selection{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:20px}
+.sterlyn-selection article{display:flex;justify-content:space-between;gap:22px;padding:21px 0;border-bottom:1px solid var(--line)}
+.sterlyn-selection article:last-of-type{border-bottom:0}
+.sterlyn-selection h3{font-size:28px;margin:8px 0}
+.sterlyn-selection article p{font-size:11px;color:var(--muted)}
+.sterlyn-selection article button{align-self:start;padding:7px;border:1px solid var(--line);flex-shrink:0}
+.sterlyn-selection>.asset-note{margin:10px 0 18px}
+.sterlyn-save-selection{margin:15px 0 0;font-size:12px}
+@media(max-width:760px){.sterlyn-contact-grid{grid-template-columns:1fr;gap:50px}.sterlyn-contact-methods{padding:25px}.sterlyn-contact-main>h2{font-size:38px}.sterlyn-contact-form>.button{max-width:none}.sterlyn-selection h3{font-size:25px}}
