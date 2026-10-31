@@ -24,6 +24,7 @@ export default function PreviewHeader() {
       <nav aria-label="Preview navigation" className={open ? 'main-nav open' : 'main-nav'}>
         {links.map(([href, name]) => <Link href={href} key={href} className={pathname === href ? 'active' : ''} onClick={() => setOpen(false)}>{name}</Link>)}
         <Link href="/design-studio" className="mobile-studio" onClick={() => setOpen(false)}>Design your space <ArrowUpRight size={16} /></Link>
+        <Link href="/cart" className="mobile-studio" onClick={() => setOpen(false)}>Your enquiry list <ArrowUpRight size={16} /></Link>
       </nav>
       <div className="nav-actions">
         <Link href="/design-studio" className="nav-studio">Design your space <ArrowUpRight size={16} /></Link>
