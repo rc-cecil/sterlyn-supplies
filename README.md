@@ -4,6 +4,8 @@ Next.js showroom and operations application. The supplied kitchen imagery is ill
 
 Collections contain six product families with three illustrative product previews each. The Inspiration journal has separate room/material stories and imagery. Content boundaries, reference research and safe refresh instructions are in [catalogue content](docs/CATALOGUE_CONTENT.md); exact image prompts and provenance are in [the product image manifest](docs/product-image-manifest.json).
 
+The persistent enquiry, external receipt, order-status email and guest tracking workflow is documented in [showroom operations](docs/SHOWROOM_OPERATIONS.md). Configure the shared tracking encryption key and run the notification worker for the complete experience.
+
 ## Local development
 
 Use Node 24 and pnpm. Run `pnpm install`, copy `.env.example` to `.env`, set a unique authentication secret, and configure PostgreSQL. Then:
@@ -26,7 +28,7 @@ For deployment, use `compose.production.yaml` alone and follow [release operatio
 
 ## Owner access
 
-Set `OWNER_EMAIL` and a unique `OWNER_PASSWORD` (16+ characters) in the process environment, then run `pnpm setup:owner`. The command refuses to create a second owner. Sign in at `/account` and enroll an authenticator. Staff administration requires MFA. Never commit owner credentials.
+Set `OWNER_EMAIL` and a unique `OWNER_PASSWORD` (16+ characters) in the process environment, then run `pnpm setup:owner`. The command refuses to create a second owner. Sign in at `/account` using your password. Role-based administration does not require authenticator enrollment. Never commit owner credentials.
 
 ## Routes
 
@@ -57,7 +59,7 @@ Browser tests default to port 3002 and a separate `sterlyn_test` database. Set `
 
 ## Release status
 
-Read `IMPLEMENTATION_STATUS.md`. This is an implementation in progress, not a claim that every master-spec acceptance gate is complete. The legacy `/shop` route redirects to `/collections`. Public indexing is disabled until `PUBLIC_LAUNCH=true`. Do not enable paid checkout or public launch until the remaining operational/security tests and business configuration are complete.
+Read `IMPLEMENTATION_STATUS.md`. This is an implementation in progress, not a claim that every master-spec acceptance gate is complete. The legacy `/shop` route redirects to `/collections`. Public indexing is disabled until `PUBLIC_LAUNCH=true`. Online checkout remains disabled. Review the branch, operational checks and business configuration before public launch.
 
 ## Local demo email and Docker
 

@@ -25,7 +25,7 @@ Processor isolation: non-root, no network, read-only root, dropped capabilities,
 
 ## Owner and business approval
 
-Follow `docs/OWNER_SETUP.md`: privately supply OWNER_EMAIL and OWNER_PASSWORD for the protected CLI, check `pnpm setup:owner --status`, bootstrap once, enroll and verify MFA, and store recovery codes privately. Remove bootstrap credentials from the runtime after setup. Never generate default owner credentials or change MFA flags directly.
+Follow `docs/OWNER_SETUP.md`: privately supply OWNER_EMAIL and OWNER_PASSWORD for the protected CLI, check `pnpm setup:owner --status`, bootstrap once and verify password-based role access. Authenticator enrollment is not required. Remove bootstrap credentials from the runtime after setup. Never generate default owner credentials or alter historical authenticator records.
 
 In owner settings, approve actual business identity/contact and legal CMS content. Invoice issuance requires `invoiceIssuer` with `approved:true`, legalName, address, contact and taxTreatment; server records the approving owner. Quote amounts/tax/delivery require confirmed commercial information. Invoices never mark orders paid.
 

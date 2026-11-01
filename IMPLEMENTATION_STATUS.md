@@ -1,5 +1,8 @@
 # Sterlyn implementation status — 18 October 2026
 
+> Current showroom upgrade (1 November 2026): see [delivery report](docs/SHOWROOM_DELIVERY_REPORT.md) and [operations/deployment guide](docs/SHOWROOM_OPERATIONS.md). The current workflow uses password-based staff authentication without mandatory authenticator enrollment, persistent enquiries, external receipts and private account-free tracking. Historical entries below describe earlier releases and do not override this workflow.
+
+
 **Quote-first demo is runnable; public launch is not approved.** Payments, Google generation, OpenAI execution and indexing remain disabled. No real owner credentials or business claims were invented. Existing design, official logo, concept labels and databases/volumes are preserved.
 
 This matrix supersedes older pending statements. Historical checkpoints and earlier failures are retained in `docs/IMPLEMENTATION_HISTORY.md`.

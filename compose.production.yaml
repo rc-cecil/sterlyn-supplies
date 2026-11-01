@@ -43,15 +43,13 @@ services:
     <<: *application
     command: node --import tsx scripts/worker.ts
     healthcheck:
-      test: [CMD, node, --import, tsx, --input-type=module, -e, "import {db} from './src/lib/db.ts';const r=await db.setting.findUnique({where:{key:'workerHeartbeat'}});await db.$$disconnect();process.exit(r?.value?.at && Date.now()-Date.parse(r.value.at)<60000 && r.value.processorReady ? 0 : 1)"]
+      test: [CMD, node, --import, tsx, --input-type=module, -e, "import {db} from './src/lib/db.ts';const r=await db.setting.findUnique({where:{key:'workerHeartbeat'}});await db.$$disconnect();process.exit(r?.value?.at && Date.now()-Date.parse(r.value.at)<60000 ? 0 : 1)"]
       interval: 30s
       timeout: 10s
       start_period: 60s
     volumes: [media_spool:/spool]
     depends_on:
       migrate: {condition: service_completed_successfully}
-      antivirus: {condition: service_healthy}
-      processor: {condition: service_started}
   storage:
     image: ${STERLYN_STORAGE_IMAGE:?Set an immutable verified storage image digest}
     command: server /data

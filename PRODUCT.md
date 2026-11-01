@@ -9,6 +9,6 @@ Ghana-facing kitchen customers browse concepts, collect ideas, design a room, an
 ## Brand commitments
 Preserve the canonical Sterlyn logo exactly. STYLE • QUALITY • INNOVATION. Luxury architectural showroom, forest green and champagne. Wren is research only.
 ## Evidence and launch
-Nineteen supplied assets; kitchen imagery is illustrative AI concept imagery. No verified prices, stock, address, installations, guarantees or testimonials. Quotes-first launch. Payment activation requires verified catalogue and merchant/fulfillment configuration.
+Nineteen supplied assets; kitchen imagery is illustrative AI concept imagery. No verified prices, stock, address, installations, guarantees or testimonials. Showroom-first operation. Agreements and payments take place outside the website; only authorized staff confirm external receipts. No online checkout or public prices.
 ## Principles
 Truthful content. Server-authoritative commerce. Accessible shopping independent of WebGL. Least-privilege operations. Never simulate external success.
