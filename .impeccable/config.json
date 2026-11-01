@@ -1,1 +1,18 @@
-{"buildPath": "code"}
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-11-01T13:54:05.214Z",
+        "reason": "Codex review: .plan-2d is the preserved Design Studio measurement canvas; its two-axis grid is functional drawing notation, not decoration."
+      }
+    ]
+  }
+}

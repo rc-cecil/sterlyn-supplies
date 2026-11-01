@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import {api} from './ui';
+import {sceneSchema,type Scene} from '@/lib/domain';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, ClipboardList, Mail, MessageCircle, Phone, Trash2 } from 'lucide-react';
 import {
   addEnquiryItem, BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP, ENQUIRY_EVENT,
   enquiryItemUrl, enquiryKey, enquiryUrl, readDirectEnquiry, readEnquiryBag,
-  whatsappEnquiryText, writeEnquiryBag, type EnquiryItem,
+  writeEnquiryBag, type EnquiryItem,
 } from '@/lib/enquiry';
 
 function useEnquiryBag(): EnquiryItem[] {
@@ -35,12 +37,12 @@ export function EnquiryBasketLink({ className = 'icon-button' }: { className?: s
 
 export function AddEnquiryButton({ item, className = 'button secondary' }: { item: EnquiryItem; className?: string }) {
   const [added, setAdded] = useState(false);
+  const [error,setError]=useState('');
   return <span className="enquiry-add-control">
     <button type="button" className={className} onClick={() => {
-      addEnquiryItem(item);
-      setAdded(true);
+      const saved=addEnquiryItem(item);setAdded(saved);setError(saved?'':'Your browser could not save this selection. Use Request a quote to enquire about it directly.');
     }}>{added ? 'Added to enquiry list' : 'Add to enquiry list'} <ArrowUpRight size={17} /></button>
-    {added && <Link className="text-link" href="/cart">Review selections ↗</Link>}
+    {added && <Link className="text-link" href="/cart">Review selections ↗</Link>}{error&&<p role="alert">{error}</p>}
   </span>;
 }
 
@@ -71,19 +73,38 @@ export function EnquiryBagPage() {
         </div>
       </article>)}</div>
       <div className="enquiry-next"><p>Your enquiry will include each selected item’s name, quantity and website link.</p>
-        <Link className="button" href="/contact?basket=1">Request a quotation on WhatsApp <ArrowUpRight size={17} /></Link></div>
+        <Link className="button" href="/contact?basket=1">Request a quotation <ArrowUpRight size={17} /></Link></div>
     </> : <div className="empty"><h2>No selections yet.</h2><p>Browse the collections or inspiration journal and add ideas you like.</p>
       <Link className="button" href="/collections">Explore the collections <ArrowUpRight size={18} /></Link></div>}
   </section>;
 }
 
-export function ContactPage() {
+export function ContactPage({preview=false}:{preview?:boolean}) {
   const bag = useEnquiryBag();
   const [direct, setDirect] = useState<EnquiryItem | null>(null);
   const [fromBag, setFromBag] = useState(false);
   const [removedMessage, setRemovedMessage] = useState('');
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
+  const [email,setEmail]=useState(''),[phone,setPhone]=useState('');
+  const [scene,setScene]=useState<Scene|undefined>();
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [saved,setSaved]=useState<{reference:string;whatsappUrl:string}|null>(null);
+  const touched=useRef({name:false,email:false});
+  const submitting=useRef(false);
+  const draft=useRef<{key:string;fingerprint:string}|null>(null);
+  const loadContact=useCallback(()=>{
+    if(!preview)api<{user:{name:string;email:string}|null}>('session').then(({user})=>{if(user){if(!touched.current.name)setName(user.name);if(!touched.current.email)setEmail(user.email);}}).catch(()=>{});
+  },[preview]);
+  useEffect(()=>{
+    const context=new URLSearchParams(location.search);
+    if(!context.has('slug')&&!context.has('basket')&&!context.has('design')){try{const confirmation=JSON.parse(sessionStorage.getItem('sterlyn-enquiry-success')||'null');if(confirmation?.reference&&confirmation?.whatsappUrl)setSaved(confirmation);}catch{}}
+    try{const previous=JSON.parse(sessionStorage.getItem('sterlyn-enquiry-draft')||'null');if(previous?.key&&previous?.fingerprint)draft.current=previous;}catch{}
+    loadContact();
+    if(new URLSearchParams(location.search).get('design')==='1'){
+      try{const parsed=sceneSchema.safeParse(JSON.parse(localStorage.getItem('sterlyn-enquiry-scene')||'null'));if(parsed.success)setScene(parsed.data);else setError('Your design could not be loaded. Return to the studio and select Enquire about this design again.');}catch{setError('Your design could not be loaded. Return to the studio and try again.');}
+    }
+  },[loadContact]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setDirect(readDirectEnquiry(params));
@@ -116,8 +137,25 @@ export function ContactPage() {
     }
     setRemovedMessage(item.name + ' removed from your enquiry.');
   }
-  const whatsappHref = 'https://wa.me/' + BUSINESS_WHATSAPP + '?text=' +
-    encodeURIComponent(whatsappEnquiryText(selected, name, notes));
+  async function submit(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();if(submitting.current||preview)return;
+    submitting.current=true;setBusy(true);setError('');
+    const submitted=selected.map(item=>({...item}));
+    const payload={name,email,phone,notes,scene,items:submitted.map(({type,slug,quantity,finish})=>({type,slug,quantity,finish}))};
+    const fingerprint=JSON.stringify(payload);
+    if(!draft.current||draft.current.fingerprint!==fingerprint)draft.current={key:crypto.randomUUID(),fingerprint};
+    try{
+      try{sessionStorage.setItem('sterlyn-enquiry-draft',JSON.stringify(draft.current));}catch{}
+      const result=await api<{reference:string;whatsappUrl:string}>('enquiries',{...payload,requestKey:draft.current.key});
+      writeEnquiryBag(readEnquiryBag().flatMap(item=>{const sent=submitted.find(other=>enquiryKey(other)===enquiryKey(item));return !sent?[item]:item.quantity>sent.quantity?[{...item,quantity:item.quantity-sent.quantity}]:[];}));
+      try{sessionStorage.setItem('sterlyn-enquiry-success',JSON.stringify(result));sessionStorage.removeItem('sterlyn-enquiry-draft');}catch{}draft.current=null;
+      setSaved(result);setDirect(null);setFromBag(false);setNotes('');setPhone('');setName('');setEmail('');
+      window.history.replaceState(window.history.state,'','/contact');
+      // Same-tab navigation works after an asynchronous save without relying on popups.
+      window.location.assign(result.whatsappUrl);
+    }catch(error){setError((error as Error).message);}finally{submitting.current=false;setBusy(false);}
+  }
+  function startNew(){setSaved(null);touched.current={name:false,email:false};loadContact();draft.current=null;try{sessionStorage.removeItem('sterlyn-enquiry-draft');sessionStorage.removeItem('sterlyn-enquiry-success');}catch{}}
 
   return <section className="page-wrap enquiry-page">
     <div className="page-heading"><span className="eyebrow">CONTACT STERLYN SUPPLIES</span>
@@ -126,6 +164,8 @@ export function ContactPage() {
     </div>
     <div className="enquiry-contact-grid">
       <div className="enquiry-contact-main">
+        {saved?<section className="enquiry-success" role="status"><h2>Your enquiry is saved.</h2><p>Your reference: <strong>{saved.reference}</strong></p><p>Continue to WhatsApp to review and send your message. Opening the link does not send it automatically.</p><a className="button" href={saved.whatsappUrl}>Continue to WhatsApp <ArrowUpRight size={18}/></a><button type="button" className="text-link" onClick={startNew}>Start a new enquiry</button></section>:<>
+        {preview&&<p className="enquiry-preview-notice" role="note">Visual preview: enquiry saving is unavailable here. Contact our team directly using WhatsApp.</p>}
         <span className="eyebrow">YOUR ENQUIRY</span>
         {selected.length ? <>
           <h2>What you’re enquiring about</h2>
@@ -142,17 +182,24 @@ export function ContactPage() {
           {bag.length > 0 && <p><Link className="text-link" href="/contact?basket=1">Include your {bag.length} saved selection{bag.length === 1 ? '' : 's'} ↗</Link></p>}
         </>}
         <p className="enquiry-removal-message" role="status" aria-live="polite">{removedMessage}</p>
+        {scene&&<div className="request-notes"><h3>Design Studio layout attached</h3><p>{scene.width} × {scene.depth} m · {scene.modules.length} sample modules</p><button type="button" className="text-link" onClick={()=>setScene(undefined)}>Remove design</button></div>}
+        <form onSubmit={submit}>
         <div className="enquiry-fields">
-          <label className="field"><span>Your name (optional)</span><input autoComplete="name" maxLength={100}
-            value={name} onChange={event => setName(event.target.value)} placeholder="How should we address you?" /></label>
+          <label className="field"><span>Full name</span><input disabled={busy} required autoComplete="name" minLength={2} maxLength={100}
+            value={name} onChange={event => {touched.current.name=true;setName(event.target.value);}} placeholder="How should we address you?" /></label>
+          <label className="field"><span>Email address</span><input disabled={busy} required type="email" autoComplete="email" maxLength={254} value={email} onChange={event=>{touched.current.email=true;setEmail(event.target.value);}} /></label>
+          <label className="field"><span>Phone number (optional)</span><input disabled={busy} type="tel" autoComplete="tel" maxLength={30} value={phone} onChange={event=>setPhone(event.target.value)}/></label>
           <label className="field"><span>Your message or project details (optional)</span>
-            <textarea maxLength={3000} rows={5} value={notes} onChange={event => setNotes(event.target.value)}
+            <textarea disabled={busy} maxLength={3000} rows={5} value={notes} onChange={event => setNotes(event.target.value)}
               placeholder="Room dimensions, preferred materials, location, or any questions…" /></label>
         </div>
-        <a className="button enquiry-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={19} /> {selected.length ? 'Send selected items on WhatsApp' : 'Start a WhatsApp enquiry'} <ArrowUpRight size={18} />
-        </a>
-        <p className="asset-note">WhatsApp opens with your selected items and message already filled in. Review and press Send in WhatsApp to contact Sterlyn Supplies. No payment is taken on this website.</p>
+        <button className="button enquiry-whatsapp" disabled={busy||preview}>
+          <MessageCircle size={19}/> {busy?'Saving your enquiry…':'Save enquiry & continue to WhatsApp'} <ArrowUpRight size={18}/>
+        </button>
+        {error&&<p role="alert">{error}</p>}
+        <p className="asset-note">We save your enquiry first, then open WhatsApp with your reference and selections. Review and press Send in WhatsApp. No payment is taken on this website.</p>
+        </form></>}
+
       </div>
       <aside className="enquiry-contact-methods">
         <h2>Reach us directly.</h2>

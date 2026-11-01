@@ -91,7 +91,7 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
   }
   else if (route === 'about') content = <section className="page-wrap"><PreviewIntro tag="OUR STORY" title="Considered spaces. Everyday living." description="Sterlyn Supplies Limited is a kitchen furniture and supplies brand. Explore our concept collection, shape your ideas and imagine the possibilities for your space." /><div className="studio-promo" style={{marginTop: 50}}><div className="studio-promo-image"><Image src="/images/kitchen-emerald-v2.webp" fill alt="Illustrative emerald kitchen concept" sizes="(max-width: 700px) 100vw, 60vw" /></div><div className="studio-promo-copy"><h2>Style. Quality.<br/><em>Innovation.</em></h2><p>The imagery is illustrative. Materials, availability and final specifications are confirmed during quotation.</p><Link className="text-link" href="/inspiration">Explore our perspectives <ArrowUpRight size={18} /></Link></div></div></section>;
   else if (route === 'design-studio') content = <Designer preview/>;
-  else if (route === 'contact') content = <ContactPage />;
+  else if (route === 'contact') content = <ContactPage preview />;
   else if (route === 'cart' || route === 'checkout') content = <EnquiryBagPage />;
   else content = <section className="page-wrap narrow"><PreviewIntro tag="CLIENT PREVIEW" title="Coming in the full storefront." description="This feature is not available in the view-only client preview. The live application and administrative features remain unchanged." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
   return <>

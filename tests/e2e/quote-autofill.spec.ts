@@ -1,71 +1,18 @@
 import {test,expect,type Page} from '@playwright/test';
 const customer={name:'Quote Customer',email:'customer@example.test'};
 async function openQuote(page:Page,entry:string){
- await page.goto(entry==='studio'?'/design-studio':'/products/the-emerald-room');
- if(entry==='bag'){
-  await page.getByRole('button',{name:'Add to bag',exact:true}).click();
-  await expect(page.getByRole('status').filter({hasText:'Added to your collection bag.'})).toBeVisible();
-  await page.goto('/cart');
- }
- await page.getByRole('button',{name:entry==='bag'?'Request this collection':entry==='studio'?'Request this kitchen':'Request a tailored quote',exact:true}).click();
- return page.getByRole('dialog');
+ if(entry==='studio'){await page.goto('/design-studio');await page.getByRole('link',{name:'Enquire about this design'}).click();}
+ else{await page.goto('/products/the-emerald-room');if(entry==='bag'){await page.getByRole('button',{name:'Add to enquiry list',exact:true}).click();await page.goto('/cart');await page.getByRole('link',{name:'Request a quotation',exact:true}).click();}else await page.getByRole('link',{name:'Request a quote on WhatsApp'}).click();}
+ await expect(page).toHaveURL(/\/contact\?/);return page.locator('.enquiry-contact-main');
 }
-for(const entry of ['product','bag','studio'])test(`${entry} quote autofills contact and preserves attached request`,async({page})=>{
- await page.route('**/api/session',r=>r.fulfill({json:{user:customer}}));
- let sent:Record<string,unknown>|undefined;
- await page.route('**/api/quotes',async r=>{sent=r.request().postDataJSON();if(entry==='bag')await page.route('**/api/cart',cart=>cart.fulfill({json:{items:[]}}));await r.fulfill({json:{reference:'SQ-1001',cartChanged:entry==='bag',message:'Request sent.'}});});
- const dialog=await openQuote(page,entry);
- await expect(dialog.locator('[name=name]')).toHaveValue(customer.name);
- await expect(dialog.locator('[name=email]')).toHaveValue(customer.email);
- await expect(dialog.locator('[name=phone]')).toHaveValue('');
- await dialog.locator('[name=name]').fill('Edited Customer');
- await dialog.locator('[name=email]').fill('edited@example.test');
- await dialog.locator('[name=notes]').fill('Please quote my kitchen with these selections.');
- await dialog.getByRole('button',{name:/Send/}).click();
- await expect(dialog.getByRole('status')).toContainText('SQ-1001');
- await expect(dialog.locator('form')).toHaveCount(0);
- await expect(dialog.getByRole('heading',{name:'Thank you. We’ve received your request.'})).toBeFocused();
- expect(sent).toMatchObject({name:'Edited Customer',email:'edited@example.test',phone:''});
- if(entry==='product')expect(sent).toMatchObject({variantId:expect.any(String),quantity:1});
- if(entry==='studio')expect(sent?.scene).toMatchObject({modules:expect.any(Array)});
- if(entry==='bag'){await expect(page.locator('.cart-item')).toHaveCount(0);await dialog.getByRole('button',{name:'Done',exact:true}).click();await expect(page.getByRole('heading',{name:'Your bag is ready for your selections.'})).toBeVisible();}
+for(const entry of ['product','bag','studio'])test(`${entry} quotation contact autofills without losing its selection`,async({page})=>{
+ await page.route('**/api/session',route=>route.fulfill({json:{user:customer}}));let sent:Record<string,unknown>|undefined;
+ await page.route('**/api/enquiries',async route=>{sent=route.request().postDataJSON();await route.fulfill({json:{reference:'SQ-000125',whatsappUrl:'/contact#saved'}});});
+ const form=await openQuote(page,entry);await expect(form.getByLabel('Full name',{exact:true})).toHaveValue(customer.name);await expect(form.getByLabel('Email address',{exact:true})).toHaveValue(customer.email);await expect(form.getByLabel('Phone number (optional)')).toHaveValue('');
+ await form.getByLabel('Full name',{exact:true}).fill('Edited Customer');await form.getByLabel('Email address',{exact:true}).fill('edited@example.test');await form.getByRole('button',{name:'Save enquiry & continue to WhatsApp'}).click();
+ await expect(form).toContainText('SQ-000125');await expect(form.locator('form')).toHaveCount(0);expect(sent).toMatchObject({name:'Edited Customer',email:'edited@example.test',phone:''});
+ if(entry==='studio')expect(sent?.scene).toMatchObject({modules:expect.any(Array)});else expect(sent?.items).toEqual(expect.arrayContaining([expect.objectContaining({type:'product',quantity:1})]));await page.reload();await expect(page.locator('.enquiry-success')).toContainText('SQ-000125');await expect(page.locator('.enquiry-contact-main form')).toHaveCount(0);await page.getByRole('button',{name:'Start a new enquiry'}).click();await expect(page.getByLabel('Full name',{exact:true})).toHaveValue(customer.name);await expect(page.getByLabel('Email address',{exact:true})).toHaveValue(customer.email);
 });
-test('delayed session preserves typed values, including cleared fields',async({page})=>{
- let release!:()=>void;const ready=new Promise<void>(resolve=>release=resolve);
- await page.route('**/api/session',async r=>{await ready;await r.fulfill({json:{user:customer}});});
- const dialog=await openQuote(page,'product');
- await dialog.locator('[name=name]').fill('Typing Customer');
- await dialog.locator('[name=email]').fill('temporary@example.test');
- await dialog.locator('[name=email]').fill('');
- release();
- await expect.poll(()=>page.request.get('/api/live').then(r=>r.status())).toBe(200);
- await expect(dialog.locator('[name=name]')).toHaveValue('Typing Customer');
- await expect(dialog.locator('[name=email]')).toHaveValue('');
-});
-for(const failed of [false,true])test(`guest quote remains usable when session ${failed?'fails':'is anonymous'}`,async({page})=>{
- await page.route('**/api/session',r=>r.fulfill({status:failed?500:200,json:failed?{error:'Unavailable'}:{user:null}}));
- await page.route('**/api/quotes',r=>r.fulfill({json:{reference:'SQ-1002',message:'Request sent.'}}));
- const dialog=await openQuote(page,'product');
- await expect(dialog.locator('[name=name]')).toHaveValue('');
- await expect(dialog.locator('[name=email]')).toHaveValue('');
- await dialog.locator('[name=name]').fill('Guest Customer');await dialog.locator('[name=email]').fill('guest@example.test');
- await dialog.locator('[name=notes]').fill('Please quote this kitchen.');await dialog.getByRole('button',{name:'Send quote request'}).click();
- await expect(dialog.getByRole('status')).toContainText('SQ-1002');
- await expect(dialog.locator('form')).toHaveCount(0);
- await dialog.getByRole('button',{name:'Done',exact:true}).click();
- await expect(page.getByRole('dialog')).toHaveCount(0);
-});
-test('failed request keeps entered details and allows a successful retry',async({page})=>{
- await page.route('**/api/session',r=>r.fulfill({json:{user:customer}}));
- let submissions=0;
- await page.route('**/api/quotes',r=>{submissions++;return r.fulfill(submissions===1?{status:500,json:{error:'Please try again.'}}:{json:{reference:'SQ-1003'}});});
- const dialog=await openQuote(page,'product');
- await expect(dialog.locator('[name=name]')).toHaveValue(customer.name);
- await dialog.locator('[name=notes]').fill('Keep my project details on failure.');
- await dialog.getByRole('button',{name:'Send quote request'}).click();
- await expect(dialog.getByRole('status')).toHaveText('Please try again.');
- await expect(dialog.locator('[name=notes]')).toHaveValue('Keep my project details on failure.');
- await dialog.getByRole('button',{name:'Send quote request'}).click();
- await expect(dialog.getByRole('status')).toContainText('SQ-1003');
- await expect(dialog.locator('form')).toHaveCount(0);expect(submissions).toBe(2);
-});
+test('delayed session preserves edited and deliberately cleared fields',async({page})=>{let release!:()=>void;const delay=new Promise<void>(resolve=>{release=resolve;});await page.route('**/api/session',async route=>{await delay;await route.fulfill({json:{user:customer}});});await page.goto('/contact');await page.getByLabel('Full name',{exact:true}).fill('Typed first');await page.getByLabel('Email address',{exact:true}).fill('typed@example.test');await page.getByLabel('Email address',{exact:true}).clear();release();await expect(page.getByLabel('Full name',{exact:true})).toHaveValue('Typed first');await expect(page.getByLabel('Email address',{exact:true})).toHaveValue('');});
+for(const failed of [false,true])test(`guest contact remains usable when session ${failed?'fails':'is anonymous'}`,async({page})=>{await page.route('**/api/session',route=>route.fulfill(failed?{status:503,json:{error:'Unavailable'}}:{json:{user:null}}));await page.goto('/contact');await expect(page.getByLabel('Full name',{exact:true})).toHaveValue('');await expect(page.getByLabel('Email address',{exact:true})).toHaveValue('');await expect(page.getByRole('button',{name:'Save enquiry & continue to WhatsApp'})).toBeEnabled();});
+test('failed save preserves details and retries with the same submission key',async({page})=>{const keys:string[]=[];await page.route('**/api/enquiries',async route=>{keys.push(route.request().postDataJSON().requestKey);await route.fulfill(keys.length===1?{status:503,json:{error:'Please retry'}}:{json:{reference:'SQ-000126',whatsappUrl:'/contact#saved'}});});await page.goto('/contact');await page.getByLabel('Full name',{exact:true}).fill('Retry Customer');await page.getByLabel('Email address',{exact:true}).fill('retry@example.test');await page.getByRole('button',{name:'Save enquiry & continue to WhatsApp'}).click();await expect(page.locator('.enquiry-contact-main').getByRole('alert')).toHaveText('Please retry');await expect(page.getByLabel('Full name',{exact:true})).toHaveValue('Retry Customer');await page.getByRole('button',{name:'Save enquiry & continue to WhatsApp'}).click();await expect(page.locator('.enquiry-success')).toContainText('SQ-000126');expect(keys[0]).toBe(keys[1]);});

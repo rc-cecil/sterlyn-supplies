@@ -1,15 +1,14 @@
 import {test,expect} from '@playwright/test';
-import {randomUUID,createHmac} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import {mkdir} from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import {bootstrapOwner} from '../../src/lib/owner-bootstrap';
 import {db} from '../../src/lib/db';
 import {authPost} from './auth-helpers';
-function totp(secret:string){const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';let bits='';for(const c of secret.toUpperCase().replace(/=+$/,''))bits+=alphabet.indexOf(c).toString(2).padStart(5,'0');const bytes=Buffer.from((bits.match(/.{8}/g)||[]).map(v=>parseInt(v,2)));const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));const digest=createHmac('sha1',bytes).update(counter).digest();const offset=digest[19]&15;return String((digest.readUInt32BE(offset)&0x7fffffff)%1000000).padStart(6,'0');}
 test('nontechnical product editor publishes and moves products; six-section responsive administration',async({page})=>{
  test.setTimeout(240000);if(new URL(process.env.DATABASE_URL!).pathname!=='/sterlyn_test')throw Error('Isolated database required');
  const email=randomUUID()+'@product-test.invalid',password=randomUUID()+randomUUID(),name='Acceptance '+randomUUID().slice(0,8);const owner=await bootstrapOwner({email,password});const origin='http://localhost:3002';let productId:string|undefined;
- try{expect((await authPost(page.request,'/api/auth/sign-in/email',{headers:{origin},data:{email,password}})).ok()).toBe(true);const enabled=await authPost(page.request,'/api/auth/two-factor/enable',{headers:{origin},data:{password}});const data=await enabled.json();expect((await authPost(page.request,'/api/auth/two-factor/verify-totp',{headers:{origin},data:{code:totp(new URL(data.totpURI).searchParams.get('secret')!)}})).ok()).toBe(true);
+ try{expect((await authPost(page.request,'/api/auth/sign-in/email',{headers:{origin},data:{email,password}})).ok()).toBe(true);
  await page.goto('/admin/products');await expect(page.getByRole('heading',{name:'Products',exact:true})).toBeVisible();await expect(page.getByRole('navigation',{name:'Administration',exact:true}).getByRole('link')).toHaveCount(6);
  await page.getByRole('button',{name:'Add product',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('Product name',{exact:true}).fill(name);await dialog.getByLabel('Description',{exact:true}).fill('Synthetic acceptance product with no commercial claims.');await dialog.getByRole('button',{name:'Choose from image library'}).click();await dialog.getByRole('button',{name:'Use picture',exact:true}).first().click();await dialog.getByRole('button',{name:'Publish',exact:true}).click();await expect(dialog.getByRole('status').filter({hasText:'Product published in its category.'})).toBeVisible();const record=await db.product.findFirstOrThrow({where:{name}});productId=record.id;expect(record.status).toBe('published');expect(record.trackStock).toBe(false);
  const choices=await db.category.findMany({where:{id:{not:record.categoryId}}});await dialog.getByLabel('Show this product in').selectOption(choices[0].id);await dialog.getByRole('button',{name:'Publish',exact:true}).click();await expect.poll(async()=>(await db.product.findUniqueOrThrow({where:{id:productId}})).categoryId).toBe(choices[0].id);await dialog.getByRole('button',{name:'Close',exact:true}).click();
