@@ -5,7 +5,7 @@ import {HeadBucketCommand} from '@aws-sdk/client-s3';
 import {scannerReadiness} from '@/lib/media-scan';
 import {NextRequest,NextResponse} from 'next/server';
 import {z,ZodError} from 'zod';
-import {auth} from '@/lib/auth';
+import {getAuth} from '@/lib/auth';
 import {db} from '@/lib/db';
 import {user,requireUser,staff,HttpError,sameOrigin,limit} from '@/lib/security';
 import {checkout,webhook} from '@/lib/commerce';
@@ -23,7 +23,7 @@ import {manageProduct,manageCategory,productWorkspace,imageLibrary} from '@/lib/
 import {overview} from '@/lib/admin-overview';
 import {putObject,object,storage} from '@/lib/storage';
 export const runtime='nodejs';
-async function handler(req:NextRequest,{params}:{params:Promise<{path:string[]}>}){try{const {path}=await params;const route=path.join('/');if(path[0]==='auth'){if(req.method!=='GET'){sameOrigin(req);await limit(req,'auth',20);}return auth.handler(req);}if(route==='live')return NextResponse.json({status:'ok'});if(route==='ready'){try{await db.$queryRaw`SELECT 1`;if(process.env.READINESS_REQUIRE_MEDIA==='true'){await storage().send(new HeadBucketCommand({Bucket:process.env.S3_BUCKET}));await scannerReadiness();const heartbeat=(await db.setting.findUnique({where:{key:'workerHeartbeat'}}))?.value as {at?:string;processorReady?:boolean}|undefined;if(!heartbeat?.at||!heartbeat.processorReady||Date.now()-Date.parse(heartbeat.at)>60000)throw new HttpError(503,'Background processing is not ready.');}return NextResponse.json({status:'ready'});}catch{throw new HttpError(503,'Required services are not ready.');}}if(route==='health'){await db.$queryRaw`SELECT 1`;return NextResponse.json({status:'ok',database:'connected'});}if(route==='payments/webhook')return NextResponse.json(await webhook(req));if(req.method!=='GET'){sameOrigin(req);await limit(req,path[0],40);}let result:unknown;
+async function handler(req:NextRequest,{params}:{params:Promise<{path:string[]}>}){try{const {path}=await params;const route=path.join('/');if(path[0]==='auth'){if(req.method!=='GET'){sameOrigin(req);await limit(req,'auth',20);}return getAuth().handler(req);}if(route==='live')return NextResponse.json({status:'ok'});if(route==='ready'){try{getAuth();await db.$queryRaw`SELECT 1`;if(process.env.READINESS_REQUIRE_MEDIA==='true'){await storage().send(new HeadBucketCommand({Bucket:process.env.S3_BUCKET}));await scannerReadiness();const heartbeat=(await db.setting.findUnique({where:{key:'workerHeartbeat'}}))?.value as {at?:string;processorReady?:boolean}|undefined;if(!heartbeat?.at||!heartbeat.processorReady||Date.now()-Date.parse(heartbeat.at)>60000)throw new HttpError(503,'Background processing is not ready.');}return NextResponse.json({status:'ready'});}catch{throw new HttpError(503,'Required services are not ready.');}}if(route==='health'){await db.$queryRaw`SELECT 1`;return NextResponse.json({status:'ok',database:'connected'});}if(route==='payments/webhook')return NextResponse.json(await webhook(req));if(req.method!=='GET'){sameOrigin(req);await limit(req,path[0],40);}let result:unknown;
 if(req.method==='GET'){
 if(route==='cart')throw new HttpError(410,'Use the showroom enquiry list and submit through Contact.');
 else if(route==='compare'){const ids=z.array(z.string().min(1).max(100)).max(4).parse((req.nextUrl.searchParams.get('ids')||'').split(',').filter(Boolean));result={products:await db.product.findMany({where:{id:{in:ids},status:'published'},include:{category:true,variants:{omit:{price:true}}}})};}

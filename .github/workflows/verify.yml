@@ -1,5 +1,8 @@
 name: Verify Sterlyn
 on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   application:
     runs-on: ubuntu-latest

@@ -1,13 +1,13 @@
 import {requestCorrelationId} from './request-context';
 import { headers } from 'next/headers';
-import { auth } from './auth';
+import { getAuth } from './auth';
 import { db } from './db';
 import { allowed } from './domain';
 import { createHash } from 'node:crypto';
 import {HttpError} from './http-error';
 export {HttpError} from './http-error';
 export const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
-export async function user(){const session=await auth.api.getSession({headers:await headers()});if(!session)return null;const current=await db.user.findUnique({where:{id:session.user.id},select:{id:true,name:true,email:true,emailVerified:true,role:true,twoFactorEnabled:true,suspended:true}});return current&&!current.suspended?current:null;}
+export async function user(){const session=await getAuth().api.getSession({headers:await headers()});if(!session)return null;const current=await db.user.findUnique({where:{id:session.user.id},select:{id:true,name:true,email:true,emailVerified:true,role:true,twoFactorEnabled:true,suspended:true}});return current&&!current.suspended?current:null;}
 export async function requireUser(){const u=await user();if(!u)throw new HttpError(401,'Please sign in to continue.');return u;}
 export async function staff(resource:string){const u=await requireUser();if(!allowed(u.role,resource))throw new HttpError(403,'You do not have permission for this operation.');return u;}
 export async function audit(u:{id:string;role:string},action:string,entity:string,entityId:string,summary:Record<string,unknown>={}){await db.auditLog.create({data:{actorId:u.id,role:u.role,action,entity,entityId,summary:JSON.parse(JSON.stringify(summary)),correlationId:requestCorrelationId()}});}

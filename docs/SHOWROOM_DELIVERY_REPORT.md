@@ -28,17 +28,21 @@ A private backup of the existing local database was taken before applying the mi
 | --- | --- |
 | TypeScript | Passed |
 | ESLint | Passed |
-| Complete unit/PostgreSQL suite | 54 tests passed across 11 files |
+| Complete unit/PostgreSQL suite | 56 tests passed across 12 files |
 | Fresh migration/schema drift | Passed; no drift |
 | Populated legacy upgrade | Passed; quotes, orders, items, payments and invoices preserved |
 | Runtime database permissions | Passed; audit mutation/truncation, migration mutation and schema creation denied |
-| Production build | Passed |
+| Production build | Passed, including a preview build with database/auth settings explicitly empty |
+| Preview runtime | Homepage/Contact 200 with visible preview notice; live submissions 503 |
+| Docker Compose configuration | Passed without interpolation or environment-file resolution |
 | Production dependency audit | Zero known vulnerabilities after compatible Zod, Vitest and fast-uri patches |
-| Browser regression | Full run passed 32/33 initially; the corrected order journey then passed. Final affected run passed all 8 enquiry/autofill/reload/order/tracking cases; a further 7/7 Contact checks confirmed account autofill when starting another enquiry. All 33 browser cases have passing evidence across these runs. |
+| Browser regression | All 37 current cases have passing local evidence across regression/focused runs. The initial full run passed 32/33; its corrected journey passed. Follow-ups passed 8/8 and 7/7 Contact cases, then 11/12 backend/render cases; the software-renderer scroll failure was resolved in a 6/6 dedicated render/layout run. The former single capture batch is now four viewport cases, with live WebGL isolated in its own browser. |
 | Responsive/accessibility | Admin enquiry/order/customer and tracking checked at 1440/820/390px; public catalogue/editor/planner, hero spacing, CSP, ownership and authentication regressions checked |
 | Local mail pipeline | HTML/plain-text message SMTP-accepted and captured by Mailpit; no external delivery |
 | Local application | Health/readiness 200, tracking page 200, unauthenticated admin API 401 |
 | Private environment secret scan | No private environment secrets found in changed files |
+
+Follow-up CI identified a long software-WebGL screenshot batch timeout and a browser-context setup failure. The capture batch is split into four viewport cases using the existing accessible fallback; live WebGL remains covered separately in its own browser at desktop/phone sizes, including frame fit and absence of pause controls. Workflow concurrency cancels redundant runs of the same branch. Preview-only configuration also exposed eager authentication initialization, now deferred until backend use with explicit production configuration safeguards. Remote checks are rerun through the draft PR.
 
 The first browser checks exposed a product guidance contrast issue and an escaping hidden mobile table heading; both were fixed. Independent visual review then requested visible stacked mobile records; the focused verdict scored that fix resolved without desktop/tablet regression. Documentation verification preserved the incumbent identity and did not repair unrelated design-document drift.
 
@@ -97,6 +101,7 @@ The pre-existing Contact removal/responsive work is preserved in separate baseli
 - [`src/components/admin/Overview.tsx`](../src/components/admin/Overview.tsx)
 - [`src/lib/admin-overview.ts`](../src/lib/admin-overview.ts)
 - [`src/lib/admin.ts`](../src/lib/admin.ts)
+- [`src/lib/auth.ts`](../src/lib/auth.ts)
 - [`src/lib/commerce.ts`](../src/lib/commerce.ts)
 - [`src/lib/domain.ts`](../src/lib/domain.ts)
 - [`src/lib/enquiry.ts`](../src/lib/enquiry.ts)
@@ -107,17 +112,20 @@ The pre-existing Contact removal/responsive work is preserved in separate baseli
 - [`src/lib/operations.ts`](../src/lib/operations.ts)
 - [`src/lib/order-email.ts`](../src/lib/order-email.ts)
 - [`src/lib/order-tracking.ts`](../src/lib/order-tracking.ts)
-- [`src/lib/quote-response.ts`](../src/lib/quote-response.ts)
+- `src/lib/quote-response.ts` — deleted
 - [`src/lib/release-operations.ts`](../src/lib/release-operations.ts)
 - [`src/lib/security.ts`](../src/lib/security.ts)
 - [`src/lib/showroom-domain.ts`](../src/lib/showroom-domain.ts)
 - [`src/lib/showroom.ts`](../src/lib/showroom.ts)
+- [`tests/auth-configuration.test.ts`](../tests/auth-configuration.test.ts)
 - [`tests/e2e/bag-feedback.spec.ts`](../tests/e2e/bag-feedback.spec.ts)
 - [`tests/e2e/contact-removal.spec.ts`](../tests/e2e/contact-removal.spec.ts)
 - [`tests/e2e/continuation.spec.ts`](../tests/e2e/continuation.spec.ts)
+- [`tests/e2e/logo-render.spec.ts`](../tests/e2e/logo-render.spec.ts)
 - [`tests/e2e/owner.spec.ts`](../tests/e2e/owner.spec.ts)
 - [`tests/e2e/product-management.spec.ts`](../tests/e2e/product-management.spec.ts)
 - [`tests/e2e/quote-autofill.spec.ts`](../tests/e2e/quote-autofill.spec.ts)
+- [`tests/e2e/release-visual.spec.ts`](../tests/e2e/release-visual.spec.ts)
 - [`tests/e2e/showroom-operations.spec.ts`](../tests/e2e/showroom-operations.spec.ts)
 - [`tests/e2e/storefront.spec.ts`](../tests/e2e/storefront.spec.ts)
 - [`tests/notifications.integration.test.ts`](../tests/notifications.integration.test.ts)

@@ -32,7 +32,7 @@ Required shared server/worker configuration:
 
 - `DATABASE_URL`: PostgreSQL runtime connection.
 - `BETTER_AUTH_URL`: public application origin; HTTPS in production.
-- `BETTER_AUTH_SECRET`: existing authentication secret.
+- `BETTER_AUTH_SECRET`: existing authentication secret, at least 32 characters for production.
 - `TRACKING_ENCRYPTION_KEY`: 32 cryptographically random bytes encoded as 64 hexadecimal characters. Generate privately with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Keep this key backed up and identical on web/worker instances. Changing it requires a reviewed tracking-link reissue process.
 - `SMTP_HOST`, `SMTP_PORT`, optional `SMTP_USER` / `SMTP_PASSWORD`, and `MAIL_FROM`: provider-approved production sender. No production address is invented by this application.
 - `TRUST_PROXY=true` only behind a trusted proxy that replaces forwarded address headers. Otherwise rate limits intentionally share a local source bucket.
@@ -51,7 +51,7 @@ Guests are not merged just because they typed an existing email. Staff review pr
 
 The existing Docker deployment supports the full PostgreSQL-backed Next.js application and a persistent worker. Keep the application and worker on the same reviewed image and key/configuration. Check `/api/health`, `/api/ready`, Business Settings and email delivery failures after deployment. Email jobs are processed before optional media work; media service readiness remains a separately configurable requirement.
 
-The database-free Netlify client preview is a visual preview. Contact explicitly disables persistent submission there; it does not fabricate enquiry references, order activity or email success. Optional direct WhatsApp contact remains available. A database-backed deployment and worker are required for business operations. This feature branch must be reviewed and tested before any merge or production deployment.
+The database-free Netlify client preview is a visual preview. Authentication is initialized only when a real backend request needs it, so importing shared routes does not require production-only auth configuration. Real production auth requests fail closed when the origin or strong secret is missing. Contact explicitly disables persistent submission there; it does not fabricate enquiry references, order activity or email success. Optional direct WhatsApp contact remains available. A database-backed deployment and worker are required for business operations. This feature branch must be reviewed and tested before any merge or production deployment.
 
 ## Verification
 
