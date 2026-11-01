@@ -1,7 +1,7 @@
 import { z } from 'zod';
-export const roles = ['owner','admin','catalogue','fulfillment','support','analyst','content'] as const;
+export const roles = ['owner','admin','sales','catalogue','fulfillment','support','analyst','content'] as const;
 export type Role = typeof roles[number];
-const permissions: Record<string,string[]> = { owner:['*'], admin:['*'], catalogue:['products','inventory','media','schedules'], fulfillment:['orders','inventory','fulfillment'], support:['quotes','customers','support','reviews'], analyst:['analytics'], content:['cms','media','video','promotions','schedules'] };
+const permissions: Record<string,string[]> = { owner:['*'], admin:['*'], sales:['finance','quotes','orders','customers','notifications','business'], catalogue:['products','inventory','media','schedules'], fulfillment:['orders','inventory','fulfillment'], support:['notifications','quotes','customers','support','reviews'], analyst:['analytics'], content:['cms','media','video','promotions','schedules'] };
 export function allowed(role:string,resource:string) { return resource==='overview'?!!permissions[role]:permissions[role]?.some(p=>p==='*'||p===resource) ?? false; }
 export const money = (v:number) => new Intl.NumberFormat('en-GH',{style:'currency',currency:'GHS'}).format(v/100);
 export function totals(subtotal:number,discountPercent:number,taxBps:number,shipping:number) { const discount=Math.round(subtotal*discountPercent/100); const tax=Math.round((subtotal-discount)*taxBps/10000); return {subtotal,discount,tax,shipping,total:subtotal-discount+tax+shipping}; }

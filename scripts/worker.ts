@@ -2,7 +2,7 @@ import 'dotenv/config';
 import {PgBoss} from 'pg-boss';
 import {lstat,readdir,rm} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-import nodemailer from 'nodemailer';
+import {deliverNotifications} from '../src/lib/notification-delivery';
 import {isolatedProcess} from '../src/lib/media-process';
 import {runSchedules} from '../src/lib/scheduling';
 import {db} from '../src/lib/db';
@@ -48,12 +48,11 @@ async function cleanupOrphans(){
  }
 }
 async function tick(){
+await deliverNotifications();
 try{await cleanupOrphans();
 for(const intent of await db.uploadIntent.findMany({where:{expiresAt:{lt:new Date(Date.now()-24*3600000)}},take:20})){await storage().send(new DeleteObjectCommand({Bucket:process.env.S3_BUCKET,Key:intent.key}));await db.uploadIntent.delete({where:{id:intent.id}});}}catch{console.warn('Media cleanup deferred; storage unavailable.');}
-await db.videoJob.updateMany({where:{kind:'process',status:'running',OR:[{leaseUntil:{lt:new Date()}},{leaseUntil:null}]},data:{status:'failed',leaseToken:null,leaseUntil:null,error:'Processing interrupted; lease expired. Staff may retry.'}});
-for(const j of await db.videoJob.findMany({where:{kind:'process',status:'queued'},take:10}))await boss.send('media',{id:j.id},{singletonKey:j.id+':'+j.updatedAt.getTime(),retryLimit:0,expireInSeconds:360});
-await db.notification.updateMany({where:{status:'sending',updatedAt:{lt:new Date(Date.now()-15*60000)}},data:{status:'delivery_unknown',error:'Worker interrupted during delivery; verify before retrying.'}});
-if(process.env.SMTP_HOST&&process.env.MAIL_FROM){const mailer=nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_PORT==='465',requireTLS:process.env.NODE_ENV==='production'&&!(['mail','localhost','127.0.0.1'].includes(process.env.SMTP_HOST)&&process.env.SMTP_ALLOW_INSECURE_LOCAL==='true'),auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD}:undefined});for(const mail of await db.notification.findMany({where:{status:'queued',nextAttemptAt:{lte:new Date()},attempts:{lt:5}},take:10})){const claimed=await db.notification.updateMany({where:{id:mail.id,status:'queued'},data:{status:'sending',attempts:{increment:1}}});if(!claimed.count)continue;try{await mailer.sendMail({from:process.env.MAIL_FROM,to:mail.recipient,subject:mail.subject,text:mail.body});await db.notification.update({where:{id:mail.id},data:{status:'sent'}});}catch(error){const definitive=typeof error==='object'&&error!==null&&('responseCode'in error||('code'in error&&['ECONNREFUSED','ENOTFOUND','EAI_AGAIN'].includes(String(error.code))));const exhausted=mail.attempts+1>=5;await db.notification.update({where:{id:mail.id},data:{status:definitive?(exhausted?'failed':'queued'):'delivery_unknown',nextAttemptAt:new Date(Date.now()+Math.min(3600000,60000*2**mail.attempts)),error:definitive?'SMTP rejected delivery; bounded retry scheduled.':'Delivery outcome unknown; verify before retrying.'}});}}}
+try{await db.videoJob.updateMany({where:{kind:'process',status:'running',OR:[{leaseUntil:{lt:new Date()}},{leaseUntil:null}]},data:{status:'failed',leaseToken:null,leaseUntil:null,error:'Processing interrupted; lease expired. Staff may retry.'}});
+for(const j of await db.videoJob.findMany({where:{kind:'process',status:'queued'},take:10}))await boss.send('media',{id:j.id},{singletonKey:j.id+':'+j.updatedAt.getTime(),retryLimit:0,expireInSeconds:360});}catch{console.warn('Media scheduling deferred.');}
 await db.$transaction(async tx=>{const reservations=await tx.reservation.findMany({where:{released:false,expiresAt:{lt:new Date()},order:{status:{in:['pending_payment','cancelled']}}},take:100});for(const r of reservations){const claim=await tx.reservation.updateMany({where:{id:r.id,released:false},data:{released:true}});if(claim.count){await tx.variant.update({where:{id:r.variantId},data:{stock:{increment:r.quantity}}});await tx.order.update({where:{id:r.orderId},data:{status:'cancelled'}});}}},{isolationLevel:'Serializable'});
 await runSchedules();
 let processorReady=false;try{const heartbeat=await lstat((process.env.MEDIA_SPOOL||'/spool')+'/processor-heartbeat');processorReady=heartbeat.isFile()&&Date.now()-heartbeat.mtimeMs<15000;}catch{}

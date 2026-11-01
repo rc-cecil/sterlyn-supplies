@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {db} from '../src/lib/db';
 import {bootstrapOwner} from '../src/lib/owner-bootstrap';
 process.env.BETTER_AUTH_URL='http://localhost:3002';
+process.env.TRACKING_ENCRYPTION_KEY='11'.repeat(32);
 const enabled=process.env.RUN_DATABASE_TESTS==='true';
 if(enabled&&new URL(process.env.DATABASE_URL!).pathname!=='/sterlyn_test')throw new Error('Integration tests require isolated sterlyn_test database');
 const actor=vi.hoisted(()=>({id:'',role:'owner',email:'',emailVerified:true}));
@@ -40,17 +41,17 @@ describe.skipIf(!enabled)('PostgreSQL quote conversion',()=>{
   const variant=await db.variant.findFirstOrThrow();
   const quote=await db.quote.create({data:{name:'Integration customer',email:'quote@integration.invalid',notes:'Test snapshot',status:'accepted',estimate:2500,items:[{variantId:variant.id,sku:'TEST',name:'Quoted cabinet',quantity:2}]}});
   try {
-   const input={id:quote.id,reason:'Accepted commercial details',tax:300,shipping:200,linePrices:{[variant.id]:1000},address:{line1:'Test street',city:'Accra',region:'Greater Accra'}};
+   const input={id:quote.id,reason:'Accepted commercial details',amount:2500,currency:'GHS',address:'Test street, Accra',confirmCustomer:true};
    const results=await Promise.all([convertQuote(input),convertQuote(input)]);
    expect(results[0].record.id).toBe(results[1].record.id);
    const order=await db.order.findUniqueOrThrow({where:{sourceQuoteId:quote.id},include:{items:true,payments:true}});
-   expect(order.status).toBe('awaiting_confirmation');expect(order.total).toBe(2500);expect(order.payments).toHaveLength(0);expect(order.items).toHaveLength(1);
+   expect(order.status).toBe('confirmed');expect(order.total).toBe(2500);expect(order.payments).toHaveLength(0);expect(order.items).toHaveLength(1);
    await db.quote.update({where:{id:quote.id},data:{items:[]}});
    expect((order.quoteSnapshot as {items:unknown[]}).items).toHaveLength(1);
   } finally {
    const order=await db.order.findUnique({where:{sourceQuoteId:quote.id}});
    if(order){await db.orderEvent.deleteMany({where:{orderId:order.id}});await db.orderItem.deleteMany({where:{orderId:order.id}});await db.order.delete({where:{id:order.id}});}
-   await db.quote.delete({where:{id:quote.id}});
+   await db.enquiryEvent.deleteMany({where:{quoteId:quote.id}});await db.quote.delete({where:{id:quote.id}});
   }
  });
 });
@@ -111,14 +112,14 @@ describe.skipIf(!enabled)('Release operations',()=>{
   const quote=await db.quote.create({data:{name:'Test buyer',email:'invoice@integration.invalid',notes:'Synthetic quote',status:'accepted',estimate:1000,items:[{variantId:variant.id,sku:variant.sku,name:'Quoted unit',quantity:1}]}});
   const previous=await db.setting.findUnique({where:{key:'invoiceIssuer'}});let orderId='';
   try{
-   const converted=await convertQuote({id:quote.id,reason:'Invoice verification',tax:0,shipping:0,linePrices:{[variant.id]:1000},address:{line1:'Synthetic test only',city:'Accra',region:'Test region'}});orderId=converted.record.id;
+   const converted=await convertQuote({id:quote.id,reason:'Invoice verification',amount:1000,currency:'GHS',address:'Synthetic test only, Accra',confirmCustomer:true});orderId=converted.record.id;
    const draft=await invoiceCommand({action:'draft',id:orderId,reason:'Verify draft'});await db.setting.deleteMany({where:{key:'invoiceIssuer'}});
    await expect(invoiceCommand({action:'issue',confirmation:'yes',id:draft.record.id,reason:'Missing approved details'})).rejects.toMatchObject({status:409});
    await db.setting.create({data:{key:'invoiceIssuer',value:{approved:true,approvedBy:'synthetic-test',legalName:'Synthetic test issuer',address:'Synthetic address',contact:'test@integration.invalid',taxTreatment:'Synthetic test only'}}});
    const issued=await invoiceCommand({action:'issue',confirmation:'yes',id:draft.record.id,reason:'Approved synthetic test'});expect(issued.record.number).toMatch(/^ST-\d{4}-\d{6}$/);
    expect((await invoiceCommand({action:'issue',confirmation:'yes',id:draft.record.id,reason:'Verify idempotency'})).record.number).toBe(issued.record.number);
-   expect(await db.payment.count({where:{orderId}})).toBe(0);expect((await db.order.findUniqueOrThrow({where:{id:orderId}})).status).toBe('awaiting_confirmation');
-  }finally{await db.setting.deleteMany({where:{key:'invoiceIssuer'}});if(previous)await db.setting.create({data:{key:previous.key,value:previous.value!}});if(orderId){await db.invoice.deleteMany({where:{orderId}});await db.orderEvent.deleteMany({where:{orderId}});await db.orderItem.deleteMany({where:{orderId}});await db.order.delete({where:{id:orderId}});}await db.quote.delete({where:{id:quote.id}});}
+   expect(await db.payment.count({where:{orderId}})).toBe(0);expect((await db.order.findUniqueOrThrow({where:{id:orderId}})).status).toBe('confirmed');
+  }finally{await db.setting.deleteMany({where:{key:'invoiceIssuer'}});if(previous)await db.setting.create({data:{key:previous.key,value:previous.value!}});if(orderId){await db.invoice.deleteMany({where:{orderId}});await db.orderEvent.deleteMany({where:{orderId}});await db.orderItem.deleteMany({where:{orderId}});await db.order.delete({where:{id:orderId}});}await db.enquiryEvent.deleteMany({where:{quoteId:quote.id}});await db.quote.delete({where:{id:quote.id}});}
  });
  it('blocks privacy execution without policy, then erases eligible account data after owner review',async()=>{
   const {privacyCommand}=await import('../src/lib/release-operations');const id=randomUUID(),email=id+'@integration.invalid';
@@ -149,7 +150,7 @@ describe.skipIf(!enabled)('Concurrent inventory operations',()=>{
   const variant=await db.variant.create({data:{productId:product.id,sku:'RESERVE-'+randomUUID(),name:'Synthetic reserved unit',color:'#153c30',stock:0}});
   const order=await db.order.create({data:{name:'Synthetic cancellation',email:'cancel@integration.invalid',address:{},accessHash:randomUUID(),status:'awaiting_confirmation',subtotal:1000,tax:0,shipping:0,total:1000,reservations:{create:{variantId:variant.id,quantity:1,expiresAt:new Date(Date.now()+3600000)}}}});
   try{
-   await adminWrite('orders',{id:order.id,status:'cancelled',reason:'Synthetic immediate release'});await adminWrite('orders',{id:order.id,status:'cancelled',reason:'Synthetic duplicate command'});
+   await adminWrite('orders',{id:order.id,version:1,status:'cancelled',reason:'Synthetic immediate release'});await adminWrite('orders',{id:order.id,version:2,status:'cancelled',reason:'Synthetic duplicate command'});
    expect((await db.variant.findUniqueOrThrow({where:{id:variant.id}})).stock).toBe(1);expect(await db.stockMovement.count({where:{variantId:variant.id}})).toBe(1);
   }finally{await db.reservation.deleteMany({where:{orderId:order.id}});await db.orderEvent.deleteMany({where:{orderId:order.id}});await db.order.delete({where:{id:order.id}});await db.stockMovement.deleteMany({where:{variantId:variant.id}});await db.variant.delete({where:{id:variant.id}});await db.notification.deleteMany({where:{recipient:'cancel@integration.invalid'}});}
  });

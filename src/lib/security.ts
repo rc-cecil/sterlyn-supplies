@@ -4,7 +4,8 @@ import { auth } from './auth';
 import { db } from './db';
 import { allowed } from './domain';
 import { createHash } from 'node:crypto';
-export class HttpError extends Error {constructor(public status:number,message:string){super(message);}}
+import {HttpError} from './http-error';
+export {HttpError} from './http-error';
 export const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 export async function user(){const session=await auth.api.getSession({headers:await headers()});if(!session)return null;const current=await db.user.findUnique({where:{id:session.user.id},select:{id:true,name:true,email:true,emailVerified:true,role:true,twoFactorEnabled:true,suspended:true}});return current&&!current.suspended?current:null;}
 export async function requireUser(){const u=await user();if(!u)throw new HttpError(401,'Please sign in to continue.');return u;}

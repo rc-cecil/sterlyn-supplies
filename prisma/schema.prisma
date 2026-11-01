@@ -189,7 +189,32 @@ model Wishlist {
   product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
   @@unique([userId,productId])
 }
+model Customer {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  phone String?
+  userId String? @unique
+  verifiedBy String
+  notes String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  enquiries Quote[]
+  orders Order[]
+}
 model Order {
+  reference String? @unique @default(dbgenerated("('SSL-'::text || lpad((nextval('order_reference_seq'::regclass))::text, GREATEST(6, length((currval('order_reference_seq'::regclass))::text)), '0'::text))"))
+  customerId String?
+  customer Customer? @relation(fields:[customerId],references:[id],onDelete:Restrict)
+  phone String?
+  assignedTo String?
+  expectedDelivery DateTime?
+  resumeStatus String?
+  version Int @default(1)
+  trackingHash String? @unique
+  trackingCipher String?
+  trackingRevokedAt DateTime?
+  trackingExpiresAt DateTime?
   invoices Invoice[]
   sourceQuoteId String? @unique
   sourceQuote Quote? @relation(fields:[sourceQuoteId],references:[id])
@@ -218,18 +243,21 @@ model Order {
   events OrderEvent[]
   reservations Reservation[]
   @@index([status,createdAt])
+  @@index([customerId])
   @@index([userId])
 }
 model OrderItem {
   id String @id @default(cuid())
   orderId String
   order Order @relation(fields:[orderId],references:[id])
-  variantId String
-  variant Variant @relation(fields:[variantId],references:[id])
+  variantId String?
+  variant Variant? @relation(fields:[variantId],references:[id],onDelete:Restrict)
+  kind String @default("product")
+  snapshot Json?
   name String
   sku String
   quantity Int
-  price Int
+  price Int?
 }
 model Reservation {
   id String @id @default(cuid())
@@ -248,7 +276,17 @@ model Payment {
   order Order @relation(fields:[orderId],references:[id])
   reference String @unique
   status String @default("pending")
-  provider String @default("paystack")
+  provider String @default("manual")
+  currency String?
+  confirmedBy String?
+  confirmedAt DateTime?
+  externalReference String?
+  method String?
+  reversalOf String? @unique
+  originalReceipt Payment? @relation("ReceiptReversal",fields:[reversalOf],references:[id],onDelete:Restrict)
+  reversal Payment? @relation("ReceiptReversal")
+  reason String?
+  requestKey String? @unique
   amount Int
   authorizationUrl String?
   createdAt DateTime @default(now())
@@ -269,17 +307,37 @@ model Refund {
   providerId String? @unique
   createdAt DateTime @default(now())
 }
+model EnquiryEvent {
+  id String @id @default(cuid())
+  quoteId String
+  quote Quote @relation(fields:[quoteId],references:[id],onDelete:Restrict)
+  previousStatus String?
+  status String
+  actorId String
+  note String @default("")
+  createdAt DateTime @default(now())
+  @@index([quoteId,createdAt])
+}
 model OrderEvent {
   id String @id @default(cuid())
   orderId String
   order Order @relation(fields:[orderId],references:[id])
   status String
+  previousStatus String?
+  publicNote String?
   note String
   actorId String
   createdAt DateTime @default(now())
+  @@index([orderId,createdAt])
 }
 model Quote {
-  reference String @unique @default(dbgenerated("('SQ-'::text || nextval('quote_reference_seq'::regclass))"))
+  requestKey String? @unique
+  requestHash String?
+  customerId String?
+  customer Customer? @relation(fields:[customerId],references:[id],onDelete:Restrict)
+  version Int @default(1)
+  history EnquiryEvent[]
+  reference String @unique @default(dbgenerated("('SQ-'::text || lpad((nextval('quote_reference_seq'::regclass))::text, GREATEST(6, length((currval('quote_reference_seq'::regclass))::text)), '0'::text))"))
   customerSummary String?
   validUntil DateTime?
   order Order?
@@ -298,6 +356,7 @@ model Quote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([status,createdAt])
+  @@index([customerId])
 }
 model DesignProject {
   id String @id @default(cuid())
@@ -393,6 +452,11 @@ model Review {
   createdAt DateTime @default(now())
 }
 model Notification {
+  html String?
+  dedupeKey String? @unique
+  templateData Json?
+  leaseToken String?
+  leaseUntil DateTime?
   attempts Int @default(0)
   nextAttemptAt DateTime @default(now())
   updatedAt DateTime @updatedAt

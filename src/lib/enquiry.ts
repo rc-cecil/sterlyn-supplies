@@ -49,17 +49,19 @@ export function readEnquiryBag(): EnquiryItem[] {
   }
 }
 
-export function writeEnquiryBag(items: EnquiryItem[]): void {
-  if (typeof window === 'undefined') return;
+export function writeEnquiryBag(items: EnquiryItem[]): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     localStorage.setItem(ENQUIRY_STORAGE_KEY, JSON.stringify(items.slice(0, 40)));
     window.dispatchEvent(new Event(ENQUIRY_EVENT));
+    return true;
   } catch {
     // Storage may be disabled. Visitors can still enquire about a single item.
+    return false;
   }
 }
 
-export function addEnquiryItem(item: EnquiryItem): void {
+export function addEnquiryItem(item: EnquiryItem): boolean {
   const bag = readEnquiryBag();
   const match = bag.findIndex(existing => enquiryKey(existing) === enquiryKey(item));
   if (match >= 0) {
@@ -67,7 +69,7 @@ export function addEnquiryItem(item: EnquiryItem): void {
   } else if (bag.length < 40) {
     bag.push(item);
   }
-  writeEnquiryBag(bag);
+  return writeEnquiryBag(bag);
 }
 
 export function readDirectEnquiry(params: URLSearchParams): EnquiryItem | null {

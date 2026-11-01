@@ -1,10 +1,20 @@
 import {db} from './db';
-import {staff,audit} from './security';
+import {staff} from './security';
 import {allowed} from './domain';
-export async function overview(){const actor=await staff('overview');const can=(resource:string)=>allowed(actor.role,resource);const [products,quotes,orders,customers,recentQuotes,recentOrders]=await Promise.all([
- can('products')?db.product.count({where:{status:'published'}}):null,
- can('quotes')?db.quote.count({where:{status:{notIn:['closed','accepted']}}}):null,
- can('orders')?db.order.count({where:{status:{in:['awaiting_confirmation','processing','shipped']}}}):null,
- can('customers')?db.user.count({where:{role:'customer'}}):null,
- can('quotes')?db.quote.findMany({select:{id:true,name:true,status:true,createdAt:true},take:5,orderBy:{createdAt:'desc'}}):[],
- can('orders')?db.order.findMany({select:{id:true,name:true,status:true,createdAt:true},take:5,orderBy:{createdAt:'desc'}}):[]]);await audit(actor,'read','overview','summary');return {products,quotes,orders,customers,recentQuotes,recentOrders,freshAt:new Date().toISOString()};}
+export async function overview(query=new URLSearchParams()){
+ const actor=await staff('overview'),can=(resource:string)=>allowed(actor.role,resource);
+ const days=Math.max(1,Math.min(365,Number(query.get('days'))||30)),since=new Date(Date.now()-days*86400000),createdAt={gte:since};
+ const [quotes,orders,products,customers,notifications,recentQuotes,recentOrders,receipts]=await Promise.all([
+  (can('quotes')||can('analytics'))?db.quote.groupBy({by:['status'],where:{createdAt},_count:true}):[],
+  (can('orders')||can('analytics'))?db.order.groupBy({by:['status'],where:{createdAt},_count:true}):[],
+  can('products')?db.product.count({where:{status:'published'}}):null,
+  (can('customers')||can('analytics'))?db.customer.count():null,
+  can('notifications')||can('support')||can('analytics')?db.notification.groupBy({by:['status'],where:{createdAt},_count:true}):[],
+  can('quotes')?db.quote.findMany({select:{id:true,reference:true,name:true,status:true,createdAt:true},take:6,orderBy:{createdAt:'desc'}}):[],
+  can('orders')?db.order.findMany({select:{id:true,reference:true,name:true,status:true,createdAt:true},take:6,orderBy:{createdAt:'desc'}}):[],
+  ['owner','admin'].includes(actor.role)?db.payment.groupBy({by:['currency','reversalOf'],where:{provider:'manual',status:'confirmed',createdAt},_sum:{amount:true}}):[],
+ ]);
+ const count=(rows:{status:string;_count:number}[],...statuses:string[])=>rows.filter(row=>statuses.includes(row.status)).reduce((sum,row)=>sum+row._count,0);
+ const totalEnquiries=quotes.reduce((sum,row)=>sum+row._count,0),converted=count(quotes,'converted');
+ return {days,products,customers,totalEnquiries,newEnquiries:count(quotes,'new'),negotiations:count(quotes,'contacted','reviewing','negotiating'),pendingQuotations:count(quotes,'new','contacted','reviewing','negotiating','awaiting_customer','quoted'),awaitingCustomer:count(quotes,'awaiting_customer','quoted'),conversionRate:totalEnquiries?converted/totalEnquiries:null,confirmedOrders:count(orders,'confirmed','awaiting_confirmation','paid'),processing:count(orders,'processing'),pendingDeliveries:count(orders,'ready_for_delivery','dispatched','shipped'),completed:count(orders,'completed'),delivered:count(orders,'delivered','completed'),delayed:count(orders,'delayed'),notificationFailures:count(notifications,'failed','delivery_unknown'),recentQuotes,recentOrders,receipts:receipts.reduce((rows,payment)=>{const currency=payment.currency||'GHS';const row=rows.find(row=>row.currency===currency);const amount=(payment._sum.amount||0)*(payment.reversalOf?-1:1);if(row)row.received+=amount;else rows.push({currency,received:amount});return rows;},[] as {currency:string;received:number}[]),freshAt:new Date().toISOString(),permissions:{aggregateOnly:actor.role==='analyst',quotes:can('quotes'),orders:can('orders'),notifications:can('notifications')||can('support')}};
+}

@@ -1,0 +1,8 @@
+import {createCipheriv,createDecipheriv,createHash,randomBytes} from 'node:crypto';
+import {HttpError} from './http-error';
+export const trackingHash=(token:string)=>createHash('sha256').update(token).digest('hex');
+function key(){const raw=process.env.TRACKING_ENCRYPTION_KEY;if(!raw||!/^[a-f0-9]{64}$/i.test(raw))throw new HttpError(503,'Secure tracking requires configuration. Contact the administrator.');return Buffer.from(raw,'hex');}
+export function trackingCredentials(){const token=randomBytes(32).toString('hex'),iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(),iv);const ciphertext=Buffer.concat([cipher.update(token,'utf8'),cipher.final()]);return {token,trackingHash:trackingHash(token),trackingCipher:[iv.toString('hex'),cipher.getAuthTag().toString('hex'),ciphertext.toString('hex')].join('.')};}
+export function decryptTracking(ciphertext:string){const [iv,tag,data]=ciphertext.split('.');const decipher=createDecipheriv('aes-256-gcm',key(),Buffer.from(iv,'hex'));decipher.setAuthTag(Buffer.from(tag,'hex'));return Buffer.concat([decipher.update(Buffer.from(data,'hex')),decipher.final()]).toString('utf8');}
+export function applicationUrl(){const raw=process.env.BETTER_AUTH_URL;if(!raw)throw new HttpError(503,'Configure the application URL before sending customer links.');const url=new URL(raw);if(process.env.NODE_ENV==='production'&&url.protocol!=='https:'&&!['localhost','127.0.0.1','[::1]'].includes(url.hostname))throw new HttpError(503,'Customer links require HTTPS.');return url.origin;}
+export function trackingUrl(ciphertext:string){return applicationUrl()+'/track#'+decryptTracking(ciphertext);}
