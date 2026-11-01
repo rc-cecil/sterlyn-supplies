@@ -81,6 +81,7 @@ export function ContactPage() {
   const bag = useEnquiryBag();
   const [direct, setDirect] = useState<EnquiryItem | null>(null);
   const [fromBag, setFromBag] = useState(false);
+  const [removedMessage, setRemovedMessage] = useState('');
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   useEffect(() => {
@@ -99,6 +100,22 @@ export function ContactPage() {
     }
     return result;
   }, [bag, direct, fromBag]);
+  function removeSelection(item: EnquiryItem) {
+    const key = enquiryKey(item);
+    const remaining = readEnquiryBag().filter(current => enquiryKey(current) !== key);
+    writeEnquiryBag(remaining);
+    if (direct && enquiryKey(direct) === key) {
+      setDirect(null);
+      setFromBag(remaining.length > 0);
+      // Remove the direct selection from the URL so a reload cannot restore it.
+      const url = new URL(window.location.href);
+      ['type', 'slug', 'name', 'quantity', 'finish'].forEach(param => url.searchParams.delete(param));
+      if (remaining.length) url.searchParams.set('basket', '1');
+      else url.searchParams.delete('basket');
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    }
+    setRemovedMessage(item.name + ' removed from your enquiry.');
+  }
   const whatsappHref = 'https://wa.me/' + BUSINESS_WHATSAPP + '?text=' +
     encodeURIComponent(whatsappEnquiryText(selected, name, notes));
 
@@ -113,14 +130,18 @@ export function ContactPage() {
         {selected.length ? <>
           <h2>What you’re enquiring about</h2>
           <ol className="enquiry-selection">{selected.map(item => <li key={enquiryKey(item)}>
-            <strong>{item.name}</strong><span>{item.type === 'product' ? 'Product' : 'Inspiration'}
+            <div className="enquiry-selection-info"><strong>{item.name}</strong><span>{item.type === 'product' ? 'Product' : 'Inspiration'}
               {item.finish ? ' · ' + item.finish : ''} · Quantity {item.quantity}</span>
-            <Link href={enquiryItemUrl(item)} className="text-link">View selection ↗</Link>
+            <Link href={enquiryItemUrl(item)} className="text-link">View selection ↗</Link></div>
+            <button type="button" className="enquiry-selection-remove" onClick={() => removeSelection(item)}
+              aria-label={'Remove ' + item.name + (item.finish ? ' · ' + item.finish : '')}
+              title="Remove from enquiry"><Trash2 size={17} aria-hidden="true"/></button>
           </li>)}</ol>
           <Link className="text-link" href="/cart">Review or edit your enquiry list ↗</Link>
         </> : <><h2>How can we help?</h2><p>Send us a general enquiry, or explore our collection and select a product to request a tailored quotation.</p>
           {bag.length > 0 && <p><Link className="text-link" href="/contact?basket=1">Include your {bag.length} saved selection{bag.length === 1 ? '' : 's'} ↗</Link></p>}
         </>}
+        <p className="enquiry-removal-message" role="status" aria-live="polite">{removedMessage}</p>
         <div className="enquiry-fields">
           <label className="field"><span>Your name (optional)</span><input autoComplete="name" maxLength={100}
             value={name} onChange={event => setName(event.target.value)} placeholder="How should we address you?" /></label>
