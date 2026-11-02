@@ -1,6 +1,22 @@
 # Showroom operations delivery report
 
-Branch: `codex/showroom-operations` · 1 November 2026 · Draft pull request; no merge or production deployment.
+Original upgrade: 1 November 2026, draft PR #3. At the owner's request on 2 November, the completed feature branch was fast-forwarded into **local `main`** and the local feature branch deleted. No GitHub merge, push or production deployment was performed for this follow-up.
+
+## Local admin simplification — 2 November 2026
+
+Staff means a human owner, sales employee or delivery colleague. The portal now prioritizes Home, Enquiries, Orders, Customers and Catalogue. Occasional maintenance tools expand under Other tools instead of competing with daily work. Each enquiry/order explains the next step; optional assignment, notes, delivery details, tracking administration and history expand as needed.
+
+Home includes database-backed daily enquiry/order trends, fulfilment bars, follow-ups, clearer empty states and an expandable usage guide. Primary actions have visible button surfaces, consistent hover/press transitions, keyboard focus and reduced-motion support. Existing authentication, permissions, customer pages and public-site animations are preserved.
+
+Read [the staff guide](STAFF_GUIDE.md) and open [the local screenshot walkthrough](../out/staff-walkthrough/index.html). Screenshots use only synthetic contacts and agreements in the isolated test database; no WhatsApp message or external email is sent. They cover customer selection through staff agreement, deposit/balance, delivery completion, private tracking and generated HTML email.
+
+Follow-up files: `src/components/Admin.tsx`, `src/components/admin/Overview.tsx`, `src/components/admin/BusinessOperations.tsx`, `src/components/admin/Products.tsx`, `src/lib/admin-overview.ts`, `src/app/globals.css`, the associated product/workflow tests, this report and `docs/STAFF_GUIDE.md`. There is no additional migration or new dependency. Local work remains uncommitted for review in VS Code.
+
+Follow-up validation: production build, TypeScript, ESLint and 56 unit/database tests passed; the extended trend permission/count checks passed. The extended browser workflow (including deposit and balance) and staff-authentication checks passed. The responsive catalogue browser check also passed, including product publication/category reassignment and accessibility checks at desktop, tablet and phone sizes. All three targeted browser checks passed across the final focused runs. The gallery contains 19 numbered screenshots and is served locally at http://127.0.0.1:3005/. The initial browser run completed the business steps but exposed missing synthetic-payment cleanup in the test; that cleanup was corrected without changing business data or relaxing constraints. The old six-section navigation assertion was updated to the deliberately simplified five-task navigation. Faster navigation exposed an existing race where Add product could open before categories loaded; that action now waits for initial loading to finish.
+
+The design detector reported no findings in the changed admin UI. No new suppressions were added.
+
+## Original upgrade delivery — 1 November 2026
 
 ## Implemented features
 
