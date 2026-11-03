@@ -8,7 +8,7 @@ const enabled=process.env.RUN_DATABASE_TESTS==='true';
 if(enabled&&new URL(process.env.DATABASE_URL!).pathname!=='/sterlyn_test')throw new Error('Integration tests require isolated sterlyn_test database');
 const actor=vi.hoisted(()=>({id:'',role:'owner',email:'',emailVerified:true}));
 vi.mock('../src/lib/security',async importOriginal=>({...await importOriginal<object>(),staff:vi.fn(async()=>actor),requireUser:vi.fn(async()=>actor)}));
-const {inviteStaff,acceptInvitation,staffAccess,convertQuote}=await import('../src/lib/operations');
+const {inviteStaff,acceptInvitation,staffAccess,provisionStaff,convertQuote}=await import('../src/lib/operations');
 const created:string[]=[];
 describe.skipIf(!enabled)('PostgreSQL owner and staff transactions',()=>{
  afterAll(async()=>{if(!enabled)return;await db.staffInvitation.deleteMany({where:{invitedBy:{in:created}}});await db.notification.deleteMany({where:{recipient:{endsWith:'@integration.invalid'}}});await db.user.deleteMany({where:{id:{in:created}}});await db.$disconnect();});
@@ -19,6 +19,19 @@ describe.skipIf(!enabled)('PostgreSQL owner and staff transactions',()=>{
   const successes=results.filter(r=>r.status==='fulfilled');for(const r of successes)if(r.status==='fulfilled')created.push(r.value.id);
   expect(successes).toHaveLength(1);expect(results.filter(r=>r.status==='rejected')).toHaveLength(1);
   actor.id=created[0];expect(await db.user.count({where:{role:'owner'}})).toBe(1);
+ });
+ it('lets only the owner issue staff credentials and reset them without email invitations',async()=>{
+  const email=randomUUID()+'@integration.invalid',password=randomUUID()+randomUUID();
+  const createdStaff=await provisionStaff({action:'create',name:'Owner-issued staff',email,password,role:'fulfillment'});created.push(createdStaff.id);
+  expect(await db.user.findUniqueOrThrow({where:{id:createdStaff.id}})).toMatchObject({emailVerified:true,role:'fulfillment'});
+  expect(await db.notification.count({where:{recipient:email}})).toBe(0);
+  const account=await db.account.findFirstOrThrow({where:{userId:createdStaff.id}});expect(account.providerId).toBe('credential');expect(account.password).not.toBe(password);
+  await expect(provisionStaff({action:'create',name:'Duplicate',email,password,role:'sales'})).rejects.toMatchObject({status:409});
+  const owner=actor.id;actor.id=createdStaff.id;actor.role='fulfillment';await expect(provisionStaff({action:'create',name:'Forbidden',email:randomUUID()+'@integration.invalid',password,role:'admin'})).rejects.toMatchObject({status:403});actor.id=owner;actor.role='owner';
+  await provisionStaff({action:'reset-password',id:createdStaff.id,password:randomUUID()+randomUUID()});
+  expect((await db.account.findFirstOrThrow({where:{userId:createdStaff.id}})).password).not.toBe(account.password);
+  expect(JSON.stringify(await db.auditLog.findMany({where:{entityId:createdStaff.id}}))).not.toContain(password);
+  await expect(provisionStaff({action:'reset-password',id:owner,password})).rejects.toMatchObject({status:409});
  });
  it('queues invitations, accepts once, revokes sessions, and protects owner',async()=>{
   const id=randomUUID(),email=id+'@integration.invalid';created.push(id);

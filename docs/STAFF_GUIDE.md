@@ -1,39 +1,49 @@
-# Using the Sterlyn business desk
+# The simpler Sterlyn workflow
 
-Staff means a person: the owner, a sales colleague or someone arranging delivery. It is not an AI agent. One person can handle all these jobs. The website saves enquiries, copies agreed details into orders, prepares email updates and keeps tracking current.
+Staff are people working for the business. The owner manages access and assignments; the website records actions and keeps tracking current.
 
-Open **http://127.0.0.1:3000/admin** and sign in with your existing staff account. Passwords and role permissions are still required. Authenticator enrollment is not mandatory. Do not use the read-only Netlify preview to test saving real enquiries.
+## Owner: confirm the agreement once
 
-## Your daily work
+1. Open **Enquiries** and choose the customer's request.
+2. Choose **Confirm order & tracking**. Enter the agreed amount and delivery address, check the agreement confirmation, then confirm. You can optionally choose a colleague to handle the order.
+3. The edit form closes. A saved confirmation shows the order reference and **Copy customer tracking link**. One confirmation email is queued automatically. You do not need a separate Agreed save or an internal note.
 
-| Where | What you do |
-| --- | --- |
-| Home | Check new requests, follow-ups and delivery progress. The charts use saved records in the chosen period. |
-| Enquiries | Open a request, read the selected items, contact the customer and update the discussion status. |
-| Orders | Record verified payments and update preparation/delivery. |
-| Customers | Find a customer and open their related enquiries and orders. |
-| Catalogue | Add or edit products, pictures, categories and inspirations, if your role allows it. |
+The private tracking link works immediately. **Email delivery is on hold**, so queued email is not sent. The personal sender configuration has been removed. No company mailbox or external email service is connected by this change.
 
-**Other tools** holds occasional tasks such as staff access, email checks, website content and technical configuration. Assignment, extra notes and activity history expand when you need them.
+You can copy the same active tracking link later from the order, without regenerating it or queueing another email. Share it only with the relevant customer.
 
-## From a customer request to a completed order
+## Staff: open My work and do the next action
 
-1. The customer selects items and submits the Contact form. A saved enquiry appears in **Enquiries** with its SQ reference. An empty list means there are no saved requests matching your filters; it is not a prompt to create fake customer activity.
-2. Choose **Open** beside the enquiry. Check the customer’s items, quantities, finish and project notes.
-3. Discuss the price, payment and delivery on WhatsApp. **Contact on WhatsApp** is available when a phone number was provided. Otherwise use the conversation the customer initiated with the business, or the supplied email address. The website cannot read the WhatsApp conversation.
-4. Choose **Agreed**, write a brief internal note and **Save enquiry** once both sides agree.
-5. Choose **Convert to order**. Check the copied customer/items, enter the agreed amount and delivery address, confirm the review and create the order. No payment is assumed.
-6. Open the order. When the owner/admin has actually verified a deposit or payment outside the website, expand **Record a payment received**. Enter the amount, actual receipt time and payment method. A later balance payment is a separate receipt. Sales staff cannot confirm payments.
-7. Under **Update delivery progress**, choose the next status, add any customer-safe update and a brief internal reason, then save. Optional delivery details and assignment expand separately.
-8. Follow **Confirmed → Processing → Ready for Delivery → Dispatched → Delivered → Completed**. Use On Hold, Delayed or Cancelled when appropriate. The system only offers valid next stages.
-9. Each changed status updates the private tracking page and queues an email. The customer uses the secure email link without an account. Customer tracking hides contact details, agreed amounts, receipts and staff notes.
+The staff portal is **http://127.0.0.1:3000/staff**. Staff use the work email and password supplied by the owner; no Google sign-in or emailed invitation is required.
 
-Queued email is not the same as delivered email. A running worker and configured SMTP are required for sending. Development mail belongs in Mailpit; production needs a configured business sender. Opening WhatsApp does not send a message—the customer or staff member must press Send there.
+Assigned enquiries and orders appear in **My work**. Open a record and use its next-action button, such as **Start processing** or **Mark dispatched**. The form is not left open after saving. Current status and recent activity show what was completed, by whom and when. The owner's workspace reflects the same saved updates.
 
-## Screenshot walkthrough and local verification
+Routine notes are optional. A short explanation is still needed when reversing a financial receipt. Normal status updates are logged automatically. Regular sales, support and delivery colleagues cannot edit another colleague's records or reassign work to themselves; owner/admin manage the whole team.
 
-Open http://127.0.0.1:3005/ while the local gallery server is running, or open [the saved screenshot walkthrough](../out/staff-walkthrough/index.html). The numbered screenshots come from the actual browser workflow against `sterlyn_test`, using synthetic customer details and a synthetic agreement. They cover selection, saved enquiry, staff review, agreement, conversion, deposit/balance, every delivery stage, guest tracking, generated email and phone layout. No WhatsApp message or external email is sent.
+Order stages remain Confirmed → Processing → Ready for Delivery → Dispatched → Delivered → Completed. Delivery exceptions live under **Edit details / other status**. Nothing in a WhatsApp conversation automatically confirms a payment.
 
-The repeatable browser check is `tests/e2e/showroom-operations.spec.ts`. It requires the isolated test database and test server described in the operations guide. It writes the gallery to ignored `out/staff-walkthrough/` and removes only its own synthetic fixture. Never point acceptance tests at the business database.
+## Owner: create a colleague's login once
 
-The November 2026 simplification is local work on `main`. The completed feature branch was fast-forwarded locally and its local branch deleted at the owner's request. These changes have not been pushed, merged on GitHub, or deployed.
+Open **Manage team** → **Add staff member**. Provide their name, work email/login, job and password (at least 12 characters). Give those credentials to the colleague privately. Account creation does not create an email mailbox. The owner chooses the work email; staff do not have to register using their personal Gmail.
+
+The owner can change staff jobs and passwords, suspend access or restore access. Password changes and suspension sign out existing sessions. Owner access cannot be overwritten through these controls. Existing customer accounts and historical staff records are preserved.
+
+To assign existing work, open the enquiry's **Update enquiry** or the order's **Edit details / other status**, choose the colleague and save. The colleague sees it on their next visit or refresh. The workspace also refreshes each minute while visible.
+
+## Payments and reports are separate from creating tracking
+
+The owner/admin records a verified deposit or balance using **Record a payment received**. This is not required to generate a tracking link. No online checkout or automatic payment confirmation is introduced. Fulfilment may proceed under the business's agreed payment arrangement.
+
+The Efferd Dashboard 1 composition is adapted to Sterlyn's real work. **Needs attention / My work** comes first; **Activity & reports** is optional. No demo revenue or fabricated activity is included. The public showroom, catalogue imagery and Design Studio retain their existing design.
+
+## Local verification
+
+The latest screenshot gallery is saved in [the local walkthrough](../out/staff-walkthrough/index.html). Run `pnpm walkthrough:serve` and open http://127.0.0.1:3005/ to view it. The current browser test covers guest submission, owner-issued credentials, one-step order creation, assigned staff completion and customer tracking using only synthetic records in `sterlyn_test`. No WhatsApp message or external email is sent.
+
+All changes are local on `main`, without a new branch, push or production deployment.
+
+### Updated workspace chart
+
+Owners can inspect daily enquiry and order activity using the 7/30/90-day controls. Hover or tap a point, or focus the chart and use the arrow keys. The enquiry/order chips show or hide each series; one always remains visible. For exact figures, open **Activity & reports → View exact daily counts**.
+
+Use the search box inside the work queue to find a customer or reference among the displayed recent/assigned records. **View all** opens the complete enquiry or order list. Staff still land on their assignments. Reports do not add steps to confirming an agreement or updating delivery.

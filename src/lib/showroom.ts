@@ -7,11 +7,16 @@ import {allowed} from './domain';
 import {requestCorrelationId} from './request-context';
 import {publishedInspirations} from './inspiration-content';
 import {BUSINESS_WHATSAPP,whatsappEnquiryText} from './enquiry';
-import {amountSchema,currencySchema,enquiryInput,enquiryStatuses,itemSnapshot,canonicalEnquiryStatus,canonicalOrderStatus,nextOrderStatuses,receiptSummary,type ItemSnapshot} from './showroom-domain';
+import {amountSchema,currencySchema,enquiryInput,enquiryStatuses,itemSnapshot,label,canonicalEnquiryStatus,canonicalOrderStatus,nextOrderStatuses,receiptSummary,type ItemSnapshot} from './showroom-domain';
 import {trackingCredentials,trackingHash,trackingUrl} from './order-tracking';
 import {queueOrderEmail} from './order-email';
+import {smtpConfigured} from './notification-delivery';
 type Actor={id:string;role:string};
 const reason=z.string().trim().min(3).max(1000);
+const optionalNote=z.string().trim().max(1000).default('');
+const manager=(actor:Actor)=>['owner','admin'].includes(actor.role);
+function assignedAccess(actor:Actor,assignedTo:string|null){if(!manager(actor)&&assignedTo!==actor.id)throw new HttpError(403,'This work is not assigned to you.');}
+function assignmentChange(actor:Actor,current:string|null,next?:string){if(!manager(actor)&&next!==undefined&&next!==current)throw new HttpError(403,'Only an owner or administrator can assign work.');}
 const id=z.string().min(1).max(100);
 async function record(tx:Prisma.TransactionClient,actor:Actor,action:string,entity:string,entityId:string,summary:Prisma.InputJsonObject){await tx.auditLog.create({data:{actorId:actor.id,role:actor.role,action,entity,entityId,summary,correlationId:requestCorrelationId()}});}
 async function assignee(tx:Prisma.TransactionClient,value:string|undefined,resource:string){if(!value)return null;const target=await tx.user.findUnique({where:{id:value}});if(!target||target.suspended||!allowed(target.role,resource))throw new HttpError(400,'Choose an active staff member with the relevant permission.');return target.id;}
@@ -60,26 +65,29 @@ function enquiryResult(quote:{id:string;reference:string;name:string;notes:strin
 
 export async function updateEnquiry(input:unknown){
  const actor=await staff('quotes');
- const v=z.object({id,version:z.number().int(),status:z.enum(enquiryStatuses),assignedTo:z.string().optional(),staffNotes:z.string().max(5000).default(''),reason}).parse(input);
+ const v=z.object({id,version:z.number().int(),status:z.enum(enquiryStatuses),assignedTo:z.string().optional(),staffNotes:z.string().max(5000).optional(),reason:optionalNote}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Quote" WHERE id=${v.id} FOR UPDATE`;
   const current=await tx.quote.findUniqueOrThrow({where:{id:v.id}});
+  assignedAccess(actor,current.assignedTo);assignmentChange(actor,current.assignedTo,v.assignedTo);
   if(current.version!==v.version)throw new HttpError(409,'This enquiry changed. Reload before saving.');
   if(current.status==='converted'||v.status==='converted'||await tx.order.findUnique({where:{sourceQuoteId:v.id},select:{id:true}}))throw new HttpError(409,'Converted status is managed by order creation.');
-  const assignedTo=await assignee(tx,v.assignedTo,'quotes');
+  const assignedTo=v.assignedTo===undefined?current.assignedTo:await assignee(tx,v.assignedTo,'quotes');
   await tx.quote.update({where:{id:v.id},data:{status:v.status,staffNotes:v.staffNotes,assignedTo,version:{increment:1}}});
-  await tx.enquiryEvent.create({data:{quoteId:v.id,previousStatus:current.status,status:v.status,actorId:actor.id,note:v.reason}});
-  await record(tx,actor,'enquiry-updated','quotes',v.id,{from:current.status,to:v.status,reason:v.reason});return {message:'Enquiry updated.'};
+  await tx.enquiryEvent.create({data:{quoteId:v.id,previousStatus:current.status,status:v.status,actorId:actor.id,note:v.reason||(assignedTo!==current.assignedTo?'Assignment updated.':current.status!==v.status?'Enquiry moved to '+label(v.status)+'.':'Enquiry details updated.')}});
+  await record(tx,actor,'enquiry-updated','quotes',v.id,{from:current.status,to:v.status,reason:v.reason,assignedTo,previousAssignedTo:current.assignedTo});return {message:'Enquiry updated.'};
  });
 }
-const conversionInput=z.object({id,amount:amountSchema,currency:currencySchema.default('GHS'),address:z.string().trim().min(3).max(2000),expectedDelivery:z.iso.date().optional(),instructions:z.string().max(4000).default(''),assignedTo:z.string().optional(),customerId:z.string().optional(),confirmCustomer:z.literal(true),reason});
+const conversionInput=z.object({id,amount:amountSchema,currency:currencySchema.default('GHS'),address:z.string().trim().min(3).max(2000),expectedDelivery:z.iso.date().optional(),instructions:z.string().max(4000).default(''),assignedTo:z.string().optional(),customerId:z.string().optional(),confirmCustomer:z.literal(true),confirmAgreement:z.boolean().default(false),reason:optionalNote});
 export async function convertEnquiry(input:unknown){
  const actor=await staff('orders');await staff('quotes');const v=conversionInput.parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Quote" WHERE id=${v.id} FOR UPDATE`;
-  const prior=await tx.order.findUnique({where:{sourceQuoteId:v.id},select:{id:true,reference:true,status:true}});if(prior)return {record:prior,message:'This enquiry already has an order.'};
+  const prior=await tx.order.findUnique({where:{sourceQuoteId:v.id},select:{id:true,reference:true,status:true,assignedTo:true}});if(prior){assignedAccess(actor,prior.assignedTo);return {record:prior,message:'This enquiry already has an order.'};}
   const quote=await tx.quote.findUniqueOrThrow({where:{id:v.id}});
-  if(!['agreed','accepted'].includes(quote.status))throw new HttpError(409,'Record the WhatsApp agreement before converting this enquiry.');
+  assignedAccess(actor,quote.assignedTo);assignmentChange(actor,quote.assignedTo,v.assignedTo);
+  if(['closed','converted'].includes(quote.status))throw new HttpError(409,'This enquiry cannot be confirmed.');
+  if(!['agreed','accepted'].includes(quote.status)&&!v.confirmAgreement)throw new HttpError(409,'Record the WhatsApp agreement before converting this enquiry.');
   const items=z.array(itemSnapshot).parse(quote.items);
   // Legacy scene-only requests remain convertible without fabricated catalogue lines.
   if(!items.length&&quote.scene)items.push({type:'design',name:'Design Studio project',quantity:1});
@@ -88,44 +96,46 @@ export async function convertEnquiry(input:unknown){
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer:${email}`},0))`;
   const customer=v.customerId?await tx.customer.findUniqueOrThrow({where:{id:v.customerId}}):await tx.customer.upsert({where:{email},create:{name:quote.name,email,phone:quote.phone,verifiedBy:actor.id},update:{}});
   if(v.customerId&&customer.email!==email&&quote.customerId!==customer.id)throw new HttpError(400,'Review and match the customer identity before converting.');
-  const assignedTo=await assignee(tx,v.assignedTo,'orders'),credentials=trackingCredentials();
+  const currentAssignee=quote.assignedTo?await tx.user.findUnique({where:{id:quote.assignedTo},select:{role:true}}):null;
+  const assignedTo=await assignee(tx,v.assignedTo??(currentAssignee&&allowed(currentAssignee.role,'orders')?quote.assignedTo!:(manager(actor)?undefined:actor.id)),'orders'),credentials=trackingCredentials();
   const created=await tx.order.create({data:{sourceQuoteId:quote.id,customerId:customer.id,userId:quote.userId,name:quote.name,email:quote.email,phone:quote.phone||customer.phone,address:{deliveryAddress:v.address},assignedTo,expectedDelivery:v.expectedDelivery?new Date(v.expectedDelivery+'T12:00:00Z'):null,notes:v.instructions,quoteSnapshot:json({reference:quote.reference,items:quote.items,scene:quote.scene,notes:quote.notes}),accessHash:hash(randomUUID()),trackingHash:credentials.trackingHash,trackingCipher:credentials.trackingCipher,status:'confirmed',currency:v.currency,subtotal:v.amount,total:v.amount,tax:0,shipping:0,items:{create:items.map(item=>({variantId:item.variantId||null,kind:item.type,name:item.name,sku:item.sku||'',quantity:item.quantity,price:null,snapshot:json(item)}))}}});
-  const event=await tx.orderEvent.create({data:{orderId:created.id,status:'confirmed',note:v.reason,actorId:actor.id,publicNote:null}});
+  const event=await tx.orderEvent.create({data:{orderId:created.id,status:'confirmed',note:v.reason||'Customer agreement reviewed and order confirmed.',actorId:actor.id,publicNote:null}});
   await tx.quote.update({where:{id:quote.id},data:{status:'converted',customerId:customer.id,version:{increment:1}}});
-  await tx.enquiryEvent.create({data:{quoteId:quote.id,previousStatus:quote.status,status:'converted',note:v.reason,actorId:actor.id}});
+  await tx.enquiryEvent.create({data:{quoteId:quote.id,previousStatus:quote.status,status:'converted',note:v.reason||'Customer agreement confirmed and converted to an order.',actorId:actor.id}});
   await queueOrderEmail(tx,created,event.id);
   await record(tx,actor,'enquiry-to-order','orders',created.id,{quoteId:quote.id,customerId:customer.id,amount:v.amount,currency:v.currency,payment:'unpaid',reason:v.reason});
-  return {record:{id:created.id,reference:created.reference,status:created.status},message:'Order confirmed. Confirmation email queued; no payment has been recorded.'};
+  return {record:{id:created.id,reference:created.reference,status:created.status},trackingUrl:trackingUrl(created.trackingCipher!),message:smtpConfigured()?'Order confirmed. Tracking is ready and the confirmation email is queued. No payment has been recorded.':'Order confirmed. Tracking is ready. Email delivery is on hold; the confirmation stays queued. No payment has been recorded.'};
  });
 }
 
 export async function updateOrder(input:unknown){
  const actor=await staff('orders');
- const v=z.object({id,version:z.number().int(),status:z.string(),publicNote:z.string().trim().max(1000).default(''),reason,expectedDelivery:z.iso.date().nullable().optional(),address:z.string().min(3).max(2000).optional(),instructions:z.string().max(4000).optional(),assignedTo:z.string().optional()}).parse(input);
+ const v=z.object({id,version:z.number().int(),status:z.string(),publicNote:z.string().trim().max(1000).default(''),reason:optionalNote,expectedDelivery:z.iso.date().nullable().optional(),address:z.string().min(3).max(2000).optional(),instructions:z.string().max(4000).optional(),assignedTo:z.string().optional()}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Order" WHERE id=${v.id} FOR UPDATE`;
-  const current=await tx.order.findUniqueOrThrow({where:{id:v.id}});if(current.version!==v.version)throw new HttpError(409,'This order changed. Reload before saving.');
+  const current=await tx.order.findUniqueOrThrow({where:{id:v.id}});assignedAccess(actor,current.assignedTo);assignmentChange(actor,current.assignedTo,v.assignedTo);if(current.version!==v.version)throw new HttpError(409,'This order changed. Reload before saving.');
   const previous=canonicalOrderStatus(current.status),changed=v.status!==previous;
   if(changed&&!nextOrderStatuses(current.status,current.resumeStatus).includes(v.status))throw new HttpError(409,'This order status transition is not allowed.');
   const exception=['delayed','on_hold'].includes(v.status),wasException=['delayed','on_hold'].includes(previous);
   const assignedTo=v.assignedTo===undefined?current.assignedTo:await assignee(tx,v.assignedTo,'orders');
   const order=await tx.order.update({where:{id:current.id},data:{status:changed?v.status:current.status,version:{increment:1},assignedTo,resumeStatus:exception?(wasException?current.resumeStatus:previous):null,expectedDelivery:v.expectedDelivery===undefined?undefined:v.expectedDelivery?new Date(v.expectedDelivery+'T12:00:00Z'):null,address:v.address?{deliveryAddress:v.address}:undefined,notes:v.instructions,trackingExpiresAt:changed&&['completed','cancelled'].includes(v.status)?new Date(Date.now()+90*86400000):undefined}});
   if(changed&&v.status==='cancelled'){for(const reservation of await tx.reservation.findMany({where:{orderId:current.id,released:false}})){const released=await tx.reservation.updateMany({where:{id:reservation.id,released:false},data:{released:true}});if(released.count){await tx.variant.update({where:{id:reservation.variantId},data:{stock:{increment:reservation.quantity}}});await tx.stockMovement.create({data:{variantId:reservation.variantId,quantity:reservation.quantity,reason:'Cancelled order reservation release',actorId:actor.id}});}}}
-  if(changed){const event=await tx.orderEvent.create({data:{orderId:current.id,status:v.status,previousStatus:current.status,actorId:actor.id,note:v.reason,publicNote:v.publicNote||null}});await queueOrderEmail(tx,order,event.id,v.publicNote);}
-  await record(tx,actor,changed?'order-status':'order-details','orders',current.id,{from:current.status,to:order.status,reason:v.reason,paymentGate:'staff_decision'});
-  return {message:changed?'Status updated. Customer email queued when an active tracking link is available.':'Details saved. No status email was created.'};
+  if(changed){const event=await tx.orderEvent.create({data:{orderId:current.id,status:v.status,previousStatus:current.status,actorId:actor.id,note:v.reason||('Order moved from '+label(previous)+' to '+label(v.status)+'.'),publicNote:v.publicNote||null}});await queueOrderEmail(tx,order,event.id,v.publicNote);}
+  await record(tx,actor,changed?'order-status':'order-details','orders',current.id,{from:current.status,to:order.status,reason:v.reason||(assignedTo!==current.assignedTo?'Assignment updated.':'Order details updated.'),assignedTo,previousAssignedTo:current.assignedTo,paymentGate:'staff_decision'});
+  return {message:changed?(smtpConfigured()?'Status updated. Tracking is current and the customer email is queued when an active link is available.':'Status updated. Tracking is current. Email delivery is on hold.'):'Details saved. No status email was created.'};
  });
 }
 
 export async function recordReceipt(input:unknown){
  const actor=await staff('orders');if(!['owner','admin'].includes(actor.role))throw new HttpError(403,'Only the owner or an admin can confirm or reverse external receipts.');
- const v=z.object({id,requestKey:z.uuid(),action:z.enum(['confirm','reverse']),amount:amountSchema.optional(),currency:currencySchema.optional(),confirmedAt:z.iso.datetime().optional(),method:z.string().trim().min(2).max(80).optional(),externalReference:z.string().max(150).optional(),paymentId:z.string().optional(),reason}).parse(input);
+ const v=z.object({id,requestKey:z.uuid(),action:z.enum(['confirm','reverse']),amount:amountSchema.optional(),currency:currencySchema.optional(),confirmedAt:z.iso.datetime().optional(),method:z.string().trim().min(2).max(80).optional(),externalReference:z.string().max(150).optional(),paymentId:z.string().optional(),reason:optionalNote}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Order" WHERE id=${v.id} FOR UPDATE`;
   const prior=await tx.payment.findUnique({where:{requestKey:v.requestKey}});if(prior){if(prior.orderId!==v.id||prior.reason!==v.reason||(v.action==='reverse'?prior.reversalOf!==v.paymentId:prior.amount!==v.amount||prior.currency!==v.currency))throw new HttpError(409,'Receipt submission key already used.');return {message:'Receipt already recorded.'};}
   const order=await tx.order.findUniqueOrThrow({where:{id:v.id}});
   let amount=v.amount,reversalOf:string|undefined;
   if(v.action==='reverse'){
+   reason.parse(v.reason);
    const payment=await tx.payment.findUnique({where:{id:v.paymentId||''}});
    if(!payment||payment.orderId!==v.id||payment.provider!=='manual'||payment.status!=='confirmed'||payment.reversalOf)throw new HttpError(400,'Choose a confirmed external receipt to reverse.');
    if(await tx.payment.findUnique({where:{reversalOf:payment.id}}))throw new HttpError(409,'This receipt has already been reversed.');
@@ -136,11 +146,20 @@ export async function recordReceipt(input:unknown){
  });
 }
 
+export async function shareTracking(query:URLSearchParams){
+ const actor=await staff('orders');if(!['owner','admin','sales'].includes(actor.role))throw new HttpError(403,'Only sales or an administrator can share tracking links.');
+ const order=await db.order.findUnique({where:{id:id.parse(query.get('id'))},select:{assignedTo:true,trackingCipher:true,trackingRevokedAt:true,trackingExpiresAt:true}});
+ if(!order)throw new HttpError(404,'No active tracking link is available.');
+ assignedAccess(actor,order.assignedTo);
+ if(!order.trackingCipher||order.trackingRevokedAt||(order.trackingExpiresAt&&order.trackingExpiresAt<new Date()))throw new HttpError(404,'No active tracking link is available.');
+ return {url:trackingUrl(order.trackingCipher)};
+}
+
 export async function trackingCommand(input:unknown){
- const actor=await staff('orders');const v=z.object({id,version:z.number().int(),action:z.enum(['revoke','regenerate']),reason}).parse(input);
+ const actor=await staff('orders');const v=z.object({id,version:z.number().int(),action:z.enum(['revoke','regenerate']),reason:optionalNote}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Order" WHERE id=${v.id} FOR UPDATE`;
-  const current=await tx.order.findUniqueOrThrow({where:{id:v.id}});if(current.version!==v.version)throw new HttpError(409,'This order changed. Reload before updating its tracking link.');
+  const current=await tx.order.findUniqueOrThrow({where:{id:v.id}});assignedAccess(actor,current.assignedTo);if(current.version!==v.version)throw new HttpError(409,'This order changed. Reload before updating its tracking link.');
   const credentials=v.action==='regenerate'?trackingCredentials():null;
   const order=await tx.order.update({where:{id:v.id},data:{version:{increment:1},...(credentials?{trackingHash:credentials.trackingHash,trackingCipher:credentials.trackingCipher,trackingRevokedAt:null,trackingExpiresAt:['completed','cancelled'].includes(current.status)?new Date(Date.now()+90*86400000):null}:{trackingRevokedAt:new Date()})}});
   if(credentials)await queueOrderEmail(tx,order,'tracking-'+randomUUID());
@@ -174,34 +193,36 @@ export async function showroomRead(resource:string,query:URLSearchParams){
  const staffList=()=>db.user.findMany({where:{suspended:false,role:{in:['owner','admin','sales','support','fulfillment']}},select:{id:true,name:true,role:true}});
  if(resource==='enquiries'){
   const enquiryFilter:Prisma.QuoteWhereInput=status==='converted'?{order:{isNot:null}}:status?{status:{in:({contacted:['contacted','reviewing'],awaiting_customer:['awaiting_customer','quoted'],agreed:['agreed','accepted']} as Record<string,string[]>)[status]||[status]},order:{is:null}}:{};
-  const where:Prisma.QuoteWhereInput={...(query.get('record')?{id:query.get('record')!}:{}),...enquiryFilter,...(query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),OR:[{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
+  const where:Prisma.QuoteWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...enquiryFilter,OR:[{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
   const [rows,total,staffMembers]=await Promise.all([db.quote.findMany({where,...paging,orderBy,include:{order:{select:{id:true,reference:true}},customer:true,history:{orderBy:{createdAt:'asc'}}}}),db.quote.count({where}),staffList()]);
   const candidates=await db.customer.findMany({where:{email:{in:rows.filter(row=>!row.customerId).map(row=>row.email.toLowerCase())}},select:{id:true,name:true,email:true}});
-  return {rows:rows.map(row=>({...row,status:row.order?'converted':canonicalEnquiryStatus(row.status)})),total,staff:staffMembers,candidates,canConvert:allowed(actor.role,'orders')};
+  return {currentStaffId:actor.id,canAssign:manager(actor),rows:rows.map(row=>({...row,status:row.order?'converted':canonicalEnquiryStatus(row.status)})),total,staff:staffMembers,candidates,canConvert:allowed(actor.role,'orders')};
  }
  if(resource==='orders'){
-  const where:Prisma.OrderWhereInput={...(query.get('record')?{id:query.get('record')!}:{}),...(status?{status:{in:({confirmed:['confirmed','awaiting_confirmation','paid'],dispatched:['dispatched','shipped']} as Record<string,string[]>)[status]||[status]}}:{}),OR:[{id:{contains:q}},{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
+  const where:Prisma.OrderWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...(status?{status:{in:({confirmed:['confirmed','awaiting_confirmation','paid'],dispatched:['dispatched','shipped']} as Record<string,string[]>)[status]||[status]}}:{}),OR:[{id:{contains:q}},{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
   const finance=['owner','admin','sales'].includes(actor.role);
   const [orders,total,staffMembers]=await Promise.all([db.order.findMany({where,...paging,orderBy,include:{customer:{select:{phone:true}},items:true,payments:true,events:{orderBy:{createdAt:'asc'}},sourceQuote:{select:{reference:true,id:true}}}}),db.order.count({where}),staffList()]);
+  const details=await db.auditLog.findMany({where:{entity:'orders',entityId:{in:orders.map(order=>order.id)},action:'order-details'},orderBy:{createdAt:'asc'},select:{id:true,entityId:true,actorId:true,createdAt:true,summary:true}});
   const rows=orders.map(order=>{
+   const detailEvents=details.filter(entry=>entry.entityId===order.id).map(entry=>({id:entry.id,status:'details_updated',actorId:entry.actorId,createdAt:entry.createdAt,note:String((entry.summary as {reason?:string})?.reason||'Order details updated.')}));
    // Explicit public-to-staff DTO: credentials and encrypted tokens never leave this service.
-   const common={id:order.id,reference:order.reference,name:order.name,email:order.email,phone:order.phone||order.customer?.phone,status:canonicalOrderStatus(order.status),version:order.version,assignedTo:order.assignedTo,address:order.address,notes:order.notes,expectedDelivery:order.expectedDelivery,createdAt:order.createdAt,sourceQuote:order.sourceQuote,nextStatuses:nextOrderStatuses(order.status,order.resumeStatus),scene:(order.quoteSnapshot as {scene?:Prisma.JsonValue}|null)?.scene,customerNotes:(order.quoteSnapshot as {notes?:string}|null)?.notes,items:order.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity,kind:item.kind,snapshot:item.snapshot})),events:order.events,trackingActive:!!order.trackingHash&&!order.trackingRevokedAt,trackingExpiresAt:order.trackingExpiresAt};
+   const common={id:order.id,reference:order.reference,name:order.name,email:order.email,phone:order.phone||order.customer?.phone,status:canonicalOrderStatus(order.status),version:order.version,assignedTo:order.assignedTo,address:order.address,notes:order.notes,expectedDelivery:order.expectedDelivery,createdAt:order.createdAt,sourceQuote:order.sourceQuote,nextStatuses:nextOrderStatuses(order.status,order.resumeStatus),scene:(order.quoteSnapshot as {scene?:Prisma.JsonValue}|null)?.scene,customerNotes:(order.quoteSnapshot as {notes?:string}|null)?.notes,items:order.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity,kind:item.kind,snapshot:item.snapshot})),events:[...order.events,...detailEvents].sort((a,b)=>a.createdAt.getTime()-b.createdAt.getTime()),trackingActive:!!order.trackingHash&&!order.trackingRevokedAt,trackingExpiresAt:order.trackingExpiresAt};
    return {...common,...(finance?{currency:order.currency,total:order.total,payments:order.payments.filter(payment=>(payment.provider==='manual'&&payment.status==='confirmed')||(payment.provider!=='manual'&&payment.status==='paid')),receiptSummary:receiptSummary(order.total,order.payments)}:{})};
-  });return {rows,total,staff:staffMembers,canConfirmPayments:['owner','admin'].includes(actor.role)};
+  });return {currentStaffId:actor.id,canAssign:manager(actor),rows,total,staff:staffMembers,canShareTracking:['owner','admin','sales'].includes(actor.role),canConfirmPayments:['owner','admin'].includes(actor.role)};
  }
  if(resource==='customers'){
-  const where={...(query.get('record')?{id:query.get('record')!}:{}),OR:[{name:{contains:q,mode:'insensitive' as const}},{email:{contains:q,mode:'insensitive' as const}}]};
-  const [rows,total,pending]=await Promise.all([db.customer.findMany({where,...paging,orderBy,include:{enquiries:{select:{id:true,reference:true,status:true,createdAt:true}},orders:{select:{id:true,reference:true,status:true,createdAt:true}}}}),db.customer.count({where}),db.quote.findMany({where:{customerId:null,...where},take:30,orderBy,select:{id:true,name:true,email:true,phone:true,reference:true,status:true,version:true}})]);
-  return {rows,total,pending};
+  const where:Prisma.CustomerWhereInput={...(!manager(actor)?{AND:[{OR:[{enquiries:{some:{assignedTo:actor.id}}},{orders:{some:{assignedTo:actor.id}}}]}]}:{}),...(query.get('record')?{id:query.get('record')!}:{}),OR:[{name:{contains:q,mode:'insensitive' as const}},{email:{contains:q,mode:'insensitive' as const}}]};
+  const [rows,total,pending]=await Promise.all([db.customer.findMany({where,...paging,orderBy,include:{enquiries:{where:!manager(actor)?{assignedTo:actor.id}:{},select:{id:true,reference:true,status:true,createdAt:true}},orders:{where:!manager(actor)?{assignedTo:actor.id}:{},select:{id:true,reference:true,status:true,createdAt:true}}}}),db.customer.count({where}),db.quote.findMany({where:{customerId:null,...(!manager(actor)?{assignedTo:actor.id}:{}),OR:[{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]},take:30,orderBy,select:{id:true,name:true,email:true,phone:true,reference:true,status:true,version:true}})]);
+  return {rows,total,pending,canEdit:manager(actor)};
  }
  if(resource==='business'){
   const settings=await db.setting.findMany({where:{key:{in:['business','notificationTemplates']}}});
-  return {settings,readiness:{smtp:!!(process.env.SMTP_HOST&&process.env.MAIL_FROM),tracking:/^[a-f0-9]{64}$/i.test(process.env.TRACKING_ENCRYPTION_KEY||''),applicationUrl:!!process.env.BETTER_AUTH_URL},worker:(await db.setting.findUnique({where:{key:'workerHeartbeat'}}))?.value};
+  return {settings,readiness:{smtp:smtpConfigured(),tracking:/^[a-f0-9]{64}$/i.test(process.env.TRACKING_ENCRYPTION_KEY||''),applicationUrl:!!process.env.BETTER_AUTH_URL},worker:(await db.setting.findUnique({where:{key:'workerHeartbeat'}}))?.value};
  }
  throw new HttpError(404,'Unknown business module.');
 }
 export async function customerCommand(input:unknown){
- const actor=await staff('customers');const v=z.object({id:z.string().optional(),quoteId:z.string().optional(),version:z.number().int().optional(),name:z.string().trim().min(2).max(100),email:z.email().transform(s=>s.toLowerCase()),phone:z.string().max(30).optional(),notes:z.string().max(5000).optional(),reason,confirm:z.literal(true)}).parse(input);
+ const actor=await staff('customers');if(!manager(actor))throw new HttpError(403,'Ask the owner to edit the customer record.');const v=z.object({id:z.string().optional(),quoteId:z.string().optional(),version:z.number().int().optional(),name:z.string().trim().min(2).max(100),email:z.email().transform(s=>s.toLowerCase()),phone:z.string().max(30).optional(),notes:z.string().max(5000).optional(),reason:optionalNote,confirm:z.literal(true)}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer:${v.email}`},0))`;
   const customer=v.id?await tx.customer.findUniqueOrThrow({where:{id:v.id}}):await tx.customer.findUnique({where:{email:v.email}});

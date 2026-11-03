@@ -1,5 +1,7 @@
 # Showroom operations delivery report
 
+Latest: the owner/staff workflow was shortened on 3 November 2026 and email setup is on hold. See [the current staff guide](STAFF_GUIDE.md) and the final follow-up section below.
+
 Original upgrade: 1 November 2026, draft PR #3. At the owner's request on 2 November, the completed feature branch was fast-forwarded into **local `main`** and the local feature branch deleted. No GitHub merge, push or production deployment was performed for this follow-up.
 
 ## Local admin simplification — 2 November 2026
@@ -149,3 +151,34 @@ The pre-existing Contact removal/responsive work is preserved in separate baseli
 - [`tests/product-management.integration.test.ts`](../tests/product-management.integration.test.ts)
 - [`tests/showroom.integration.test.ts`](../tests/showroom.integration.test.ts)
 - [`tests/showroom.test.ts`](../tests/showroom.test.ts)
+
+## Workflow simplification — 3 November 2026
+
+- Personal Gmail sender settings and the personal setup note were removed; outbound email configuration is paused. Existing queue records are preserved.
+- The workspace adapts Efferd's free Dashboard 1 to real enquiries and assigned work. [Source/license notes](vendor/EFFERD.md).
+- Agreement review, conversion, tracking creation and one confirmation email queue entry happen in one transaction. An explicit agreement checkbox replaces the separate Agreed-status save. Existing Agreed enquiries and conversion retries remain supported.
+- Routine notes are optional. Actor, stage and time are recorded automatically; recent activity is visible. Financial receipt corrections still require a reason. Successful actions close edit forms and show a saved confirmation; normal order progress uses one-action buttons.
+- Owner-issued work email/password accounts work without Google or email invitations. The owner can reset passwords and revoke sessions; no password is stored in audit summaries. Creating application access does not provision an email mailbox.
+- Ordinary sales/support/fulfilment staff see and update their assigned records, with server-side checks. Owner/admin retain cross-team management. Customer history respects the same assignment boundaries; financial receipt permissions remain owner/admin only.
+- Owners/assigned sales staff can copy an existing active tracking link without regenerating it or adding an email. Public tracking still hides internal records.
+- Existing data, staff accounts, permissions, public-site design and Design Studio are preserved. No database migration or additional dependency is required. All work remains local on main.
+
+Follow-up verification: 59 unit/PostgreSQL tests passed across 12 files, with the concurrent retry/conversion scenarios retained. TypeScript, ESLint and the production build passed. Owner authentication/session boundaries passed; catalogue publication, category reassignment and desktop/tablet/phone accessibility passed; the guest → one-step confirmation → owner-issued staff login → assigned fulfilment → customer tracking browser workflow passed. The last two focused browser cases passed together; the owner check passed in its preceding focused run.
+
+The first visual pass exposed a footer contrast ratio of 4.47:1; it was corrected and the accessibility checks passed. A parallel build/test run hit the existing five-second transaction timeout under resource contention; the complete suite passed with files run sequentially, without increasing production transaction timeouts. The catalogue browser check now waits for and validates the save response before inspecting the confirmation. Routine detail notes are read from the existing audit history for staff display, without adding status events or customer emails.
+
+The manual design detector returned no findings; no new suppressions were added. Current screenshots are in ignored `out/streamlined-workflow/`, with the gallery in `out/staff-walkthrough/index.html` and at http://127.0.0.1:3005/ while the local gallery server is running. No business database was reset, no real email or WhatsApp message was sent, and no GitHub push, branch creation or production deployment was performed.
+
+## Interactive Efferd dashboard refinement — 3 November 2026
+
+The workspace now adapts the free Efferd Dashboard 1 area-chart treatment using Recharts, replacing the previous static graph. It adds 7/30/90-day periods, keyboard and pointer tooltips, enquiry/order series toggles, animated selection tabs, metric updates, and work-list transitions. Reduced-motion preferences disable movement. All production statistics still come from the existing permission-scoped overview endpoint.
+
+The large instruction/email cards were removed from the overview. A compact delivery summary, three actionable metrics and a searchable enquiry/order queue keep the screen focused. Assigned staff retain their task list before reports. Existing account, catalogue, order and tracking functionality is preserved. The public website is unchanged.
+
+Changed for this refinement: `src/components/admin/Overview.tsx`, new `src/components/admin/ActivityChart.tsx`, scoped dashboard styles in `src/app/globals.css`, `package.json`/`pnpm-lock.yaml` (Recharts), `tests/e2e/dashboard-motion.spec.ts` and source notes in `docs/vendor/EFFERD.md`. No database migration or new business-data model.
+
+The production build, TypeScript and ESLint passed. Both browser checks passed: interactive chart/date/filter/keyboard/reduced-motion behavior with desktop/tablet/phone WCAG AA and overflow checks; and the existing guest enquiry → agreement/order → owner-issued staff → assigned fulfilment → guest tracking workflow. The production dependency audit reports no known vulnerabilities. The manual design detector returned no findings; no suppressions were added. A real footer contrast issue was corrected. Screenshots contain synthetic records from the isolated test database, not invented production figures.
+
+Current dashboard screenshots are in ignored `out/efferd-dashboard/`. The local screenshot gallery at http://127.0.0.1:3005/ has been refreshed. No external email or WhatsApp message was sent. Work remains local, with no branch creation, push or deployment.
+
+Regression verification for this refinement: all 59 unit/PostgreSQL tests across 12 files passed with sequential files. PostgreSQL emitted an existing query-concurrency deprecation warning; there were no failing tests.

@@ -1,5 +1,5 @@
 import {inspirationWorkspace,saveInspiration} from '@/lib/inspiration-content';
-import {createEnquiry,updateEnquiry,updateOrder,recordReceipt,trackingCommand,lookupTracking,recoverTracking,showroomRead,customerCommand,businessSettings} from '@/lib/showroom';
+import {createEnquiry,updateEnquiry,updateOrder,recordReceipt,shareTracking,trackingCommand,lookupTracking,recoverTracking,showroomRead,customerCommand,businessSettings} from '@/lib/showroom';
 import {withRequestContext,requestCorrelationId,logFailure} from '@/lib/request-context';
 import {HeadBucketCommand} from '@aws-sdk/client-s3';
 import {scannerReadiness} from '@/lib/media-scan';
@@ -14,7 +14,7 @@ import {publishRevision,mediaHistory,rollbackMedia,retryLocalJob} from '@/lib/pu
 import {beginUpload,finishUpload} from '@/lib/media-upload';
 import {boundedJson,boundedFormData,uploadMime,MAX_UPLOAD_BYTES} from '@/lib/uploads';
 import {importCatalogue,exportCatalogue,editVariant} from '@/lib/catalogue-admin';
-import {inviteStaff,acceptInvitation,staffAccess,convertQuote} from '@/lib/operations';
+import {inviteStaff,acceptInvitation,staffAccess,provisionStaff,convertQuote} from '@/lib/operations';
 import {schedulePublication,cancelSchedule} from '@/lib/scheduling';
 import {invoiceCommand,invoiceView,privacyCommand} from '@/lib/release-operations';
 import {adminRead,adminWrite} from '@/lib/admin';
@@ -35,6 +35,7 @@ else if(path[0]==='projects'){const u=await requireUser();result=await db.design
 else if(path[0]==='orders'&&path[1]){const u=await requireUser();const order=await db.order.findFirst({where:{id:path[1],userId:u.id},select:{id:true,reference:true,status:true,createdAt:true,items:{select:{id:true,name:true,quantity:true}},events:{select:{id:true,status:true,createdAt:true},orderBy:{createdAt:'asc'}}}});if(!order)throw new HttpError(404,'Order not found');result=order;}
 else if(route==='admin/media-history')result=await mediaHistory();
 else if(route==='admin/products/export'){return new Response(await exportCatalogue(req.nextUrl.searchParams),{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename=sterlyn-products.csv','Cache-Control':'no-store'}});}
+else if(route==='admin/order-tracking'){await limit(req,'share-tracking',20);result=await shareTracking(req.nextUrl.searchParams);}
 else if(route==='admin/overview')result=await overview(req.nextUrl.searchParams);
 else if(path[0]==='admin'&&['enquiries','quotes','orders','fulfillment','customers','business'].includes(path[1]))result=await showroomRead(path[1]==='quotes'?'enquiries':path[1]==='fulfillment'?'orders':path[1],req.nextUrl.searchParams);
 else if(route==='admin/inspirations')result=await inspirationWorkspace();
@@ -69,6 +70,7 @@ else if(route==='admin/media-retry')result=await retryLocalJob(body);
 else if(route==='admin/products/import')result=await importCatalogue(body);
 else if(route==='admin/variants')result=await editVariant(body);
 else if(route==='admin/invite')result=await inviteStaff(body);
+else if(route==='admin/staff-account')result=await provisionStaff(body);
 else if(route==='admin/staff-access')result=await staffAccess(body);
 else if(route==='admin/convert-quote')result=await convertQuote(body);
 else if(route==='invitations/accept')result=await acceptInvitation(body);

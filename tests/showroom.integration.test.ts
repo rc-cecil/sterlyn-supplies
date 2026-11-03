@@ -4,7 +4,7 @@ import {db} from '../src/lib/db';
 import {allowed,defaultScene} from '../src/lib/domain';
 const actor=vi.hoisted(()=>({id:'showroom-test-owner',role:'owner'}));
 vi.mock('../src/lib/security',async original=>{const originalModule=await original<typeof import('../src/lib/security')>();return {...originalModule,user:vi.fn(async()=>null),staff:vi.fn(async(resource:string)=>{if(!allowed(actor.role,resource))throw new originalModule.HttpError(403,'Denied');return actor;})};});
-const {createEnquiry,updateEnquiry,convertEnquiry,updateOrder,recordReceipt,lookupTracking,trackingCommand,recoverTracking,showroomRead,customerCommand}=await import('../src/lib/showroom');
+const {createEnquiry,updateEnquiry,convertEnquiry,updateOrder,recordReceipt,shareTracking,lookupTracking,trackingCommand,recoverTracking,showroomRead,customerCommand}=await import('../src/lib/showroom');
 const {decryptTracking}=await import('../src/lib/order-tracking');
 const enabled=process.env.RUN_DATABASE_TESTS==='true';
 if(enabled&&new URL(process.env.DATABASE_URL!).pathname!=='/sterlyn_test')throw new Error('Isolated sterlyn_test database required');
@@ -26,17 +26,17 @@ describe.skipIf(!enabled)('showroom PostgreSQL workflow',()=>{
   const [a,b]=await Promise.all([convertEnquiry(input),convertEnquiry(input)]);expect(a.record.id).toBe(b.record.id);
   let order=await db.order.findUniqueOrThrow({where:{id:a.record.id},include:{items:true}});expect(order.reference).toMatch(/^SSL-\d{6,}$/);expect(order.items).toHaveLength(3);expect(order.items.find(item=>item.kind==='inspiration')?.variantId).toBeNull();expect(order.items.every(item=>item.price===null)).toBe(true);
   expect(await db.payment.count({where:{orderId:order.id}})).toBe(0);expect(await db.notification.count({where:{recipient:quote.email}})).toBe(1);
-  const token=decryptTracking(order.trackingCipher!);const safe=await lookupTracking({token});expect(safe.reference).toBe(order.reference);for(const field of ['email','phone','total','payments','address','notes','actorId'])expect(JSON.stringify(safe)).not.toContain('"'+field+'"');
+  const token=decryptTracking(order.trackingCipher!);expect((await shareTracking(new URLSearchParams({id:order.id}))).url).toContain('/track#'+token);const safe=await lookupTracking({token});expect(safe.reference).toBe(order.reference);for(const field of ['email','phone','total','payments','address','notes','actorId'])expect(JSON.stringify(safe)).not.toContain('"'+field+'"');
   await expect(lookupTracking({token:'aa'.repeat(32)})).rejects.toMatchObject({status:404});
   await expect(updateOrder({id:order.id,version:order.version,status:'completed',reason:'Invalid skipped delivery'})).rejects.toMatchObject({status:409});
-  await updateOrder({id:order.id,version:order.version,status:'confirmed',reason:'Same status save'});expect(await db.orderEvent.count({where:{orderId:order.id}})).toBe(1);expect(await db.notification.count({where:{recipient:quote.email}})).toBe(1);
+  await updateOrder({id:order.id,version:order.version,status:'confirmed',reason:'Same status save'});expect(await db.orderEvent.count({where:{orderId:order.id}})).toBe(1);expect(await db.notification.count({where:{recipient:quote.email}})).toBe(1);expect(JSON.stringify((await showroomRead('orders',new URLSearchParams({record:order.id}))).rows?.[0])).toContain('Same status save');
   order=await db.order.findUniqueOrThrow({where:{id:order.id},include:{items:true}});
   const attempts=await Promise.allSettled([updateOrder({id:order.id,version:order.version,status:'processing',reason:'Begin preparation',publicNote:'Your order is being prepared.'}),updateOrder({id:order.id,version:order.version,status:'processing',reason:'Concurrent duplicate'})]);expect(attempts.filter(attempt=>attempt.status==='fulfilled')).toHaveLength(1);expect(await db.orderEvent.count({where:{orderId:order.id}})).toBe(2);expect(await db.notification.count({where:{recipient:quote.email}})).toBe(2);
   actor.role='sales';await expect(recordReceipt({id:order.id})).rejects.toMatchObject({status:403});actor.role='owner';
-  const receipt={id:order.id,requestKey:randomUUID(),action:'confirm',amount:4000,currency:'GHS',confirmedAt:new Date(Date.now()-1000).toISOString(),method:'Bank transfer',reason:'Bank receipt independently verified'};
+  const receipt={id:order.id,requestKey:randomUUID(),action:'confirm',amount:4000,currency:'GHS',confirmedAt:new Date(Date.now()-1000).toISOString(),method:'Bank transfer'};
   await Promise.all([recordReceipt(receipt),recordReceipt(receipt)]);expect(await db.payment.count({where:{orderId:order.id}})).toBe(1);const read=await showroomRead('orders',new URLSearchParams({record:order.id}));expect(read.rows?.[0]).toMatchObject({receiptSummary:{status:'partially_paid',balance:6000}});
-  actor.role='fulfillment';const fulfillment=await showroomRead('orders',new URLSearchParams({record:order.id}));expect(JSON.stringify(fulfillment)).not.toContain('receiptSummary');expect(fulfillment.rows?.[0]).not.toHaveProperty('total');actor.role='owner';
-  const payment=await db.payment.findFirstOrThrow({where:{orderId:order.id}});await recordReceipt({id:order.id,requestKey:randomUUID(),action:'reverse',paymentId:payment.id,reason:'Receipt belonged to a different agreement'});expect(await db.payment.count({where:{orderId:order.id}})).toBe(2);
+  await db.order.update({where:{id:order.id},data:{assignedTo:actor.id}});actor.role='fulfillment';const fulfillment=await showroomRead('orders',new URLSearchParams({record:order.id}));expect(JSON.stringify(fulfillment)).not.toContain('receiptSummary');expect(fulfillment.rows?.[0]).not.toHaveProperty('total');actor.role='owner';
+  const payment=await db.payment.findFirstOrThrow({where:{orderId:order.id}});await expect(recordReceipt({id:order.id,requestKey:randomUUID(),action:'reverse',paymentId:payment.id})).rejects.toThrow();await recordReceipt({id:order.id,requestKey:randomUUID(),action:'reverse',paymentId:payment.id,reason:'Receipt belonged to a different agreement'});expect(await db.payment.count({where:{orderId:order.id}})).toBe(2);
   const recovery={reference:order.reference,email:quote.email};await Promise.all([recoverTracking(recovery),recoverTracking(recovery)]);expect(await db.notification.count({where:{dedupeKey:{startsWith:'recovery:'+order.id}}})).toBe(1);expect(await recoverTracking({...recovery,email:'other@example.test'})).toEqual(await recoverTracking(recovery));
   let current=await db.order.findUniqueOrThrow({where:{id:order.id}});await trackingCommand({id:order.id,version:current.version,action:'revoke',reason:'Customer requested a new private link'});await expect(lookupTracking({token})).rejects.toMatchObject({status:404});current=await db.order.findUniqueOrThrow({where:{id:order.id}});await trackingCommand({id:order.id,version:current.version,action:'regenerate',reason:'Identity verified for replacement'});await expect(lookupTracking({token})).rejects.toMatchObject({status:404});current=await db.order.findUniqueOrThrow({where:{id:order.id}});await db.order.update({where:{id:order.id},data:{trackingExpiresAt:new Date(Date.now()-1000)}});await expect(lookupTracking({token:decryptTracking(current.trackingCipher!)})).rejects.toMatchObject({status:404});
  });
@@ -45,6 +45,30 @@ describe.skipIf(!enabled)('showroom PostgreSQL workflow',()=>{
   const enquiry=await createEnquiry({requestKey:randomUUID(),name:'Later guest name',email:emails[0],items:[]});quotes.push(enquiry.id);expect((await db.quote.findUniqueOrThrow({where:{id:enquiry.id}})).customerId).toBeNull();
   await customerCommand({quoteId:enquiry.id,version:1,name:'Later guest name',email:emails[0],phone:'',confirm:true,reason:'Staff verified the existing customer identity'});
   expect(await db.customer.findUniqueOrThrow({where:{id:customer.id}})).toMatchObject({name:customer.name,notes:'Preserve existing reviewed notes',phone:'+233200000000'});expect((await db.quote.findUniqueOrThrow({where:{id:enquiry.id}})).customerId).toBe(customer.id);
+ });
+
+ it('confirms directly without routine notes and limits staff to their assigned work',async()=>{
+  actor.role='owner';const ownerId=actor.id;
+  const product=await db.product.findFirstOrThrow({where:{status:'published'}});
+  const member=await db.user.create({data:{id:randomUUID(),name:'Assigned colleague',email:randomUUID()+'@staff-scope.invalid',role:'sales',emailVerified:true}});
+  try{
+   const email=randomUUID()+'@showroom.invalid';emails.push(email);
+   const enquiry=await createEnquiry({requestKey:randomUUID(),name:'Direct agreement',email,items:[{type:'product',slug:product.slug,quantity:1}]});quotes.push(enquiry.id);
+   await updateEnquiry({id:enquiry.id,version:1,status:'new',assignedTo:member.id});
+   const command={id:enquiry.id,amount:10000,address:'Agreed address, Accra',confirmAgreement:true,confirmCustomer:true};
+   const result=await convertEnquiry(command);expect(result.trackingUrl).toContain('/track#');
+   expect(await db.notification.count({where:{recipient:email}})).toBe(1);
+   const order=await db.order.findUniqueOrThrow({where:{sourceQuoteId:enquiry.id}});expect(order.assignedTo).toBe(member.id);
+   actor.id=member.id;actor.role='sales';
+   const work=await showroomRead('orders',new URLSearchParams());expect(work.rows?.map(row=>row.id)).toEqual([order.id]);
+   await updateOrder({id:order.id,version:order.version,status:'processing'});
+   expect(await db.orderEvent.findFirstOrThrow({where:{orderId:order.id,status:'processing'}})).toMatchObject({actorId:member.id,note:'Order moved from Confirmed to Processing.'});
+   const other=await db.order.findFirstOrThrow({where:{id:{not:order.id}}});
+   expect((await showroomRead('orders',new URLSearchParams({record:other.id}))).rows).toEqual([]);
+   await expect(updateOrder({id:other.id,version:other.version,status:'processing'})).rejects.toMatchObject({status:403});
+   const current=await db.order.findUniqueOrThrow({where:{id:order.id}});
+   await expect(updateOrder({id:order.id,version:current.version,status:'ready_for_delivery',assignedTo:''})).rejects.toMatchObject({status:403});
+  }finally{actor.id=ownerId;actor.role='owner';await db.user.delete({where:{id:member.id}});}
  });
 
 });
