@@ -6,21 +6,22 @@ import Hero from '@/components/Hero';
 import { InspirationArticle, InspirationIndex } from '@/components/Inspiration';
 import { inspirationStories } from '@/lib/inspiration';
 import PreviewHeader from './PreviewHeader';
+import SupplierImage from './SupplierImage';
 import Designer from '@/components/Designer';
 import { catalogueCategories, catalogueProducts, productImage } from '@/lib/catalogue-content';
 import { AddEnquiryButton, ContactPage, EnquiryBagPage } from './ShowcaseEnquiry';
 import { enquiryUrl, BUSINESS_FACEBOOK } from '@/lib/enquiry';
 
-/** Database-free preview using the catalogue's actual separate product image assets. */
+/** Database-free showroom until a live database is explicitly connected. */
 type CatalogueItem = (typeof catalogueProducts)[number];
 
 function PreviewProductCards({items,featured=false}:{items:readonly CatalogueItem[];featured?:boolean}){
   return <div className={featured?'editorial-grid':'product-grid'}>{items.map(item=><article className="product-card" key={item.slug}>
     <Link href={'/products/'+item.slug} className="product-image">
-      <Image src={productImage(item.asset)} alt={item.name+' — illustrative product preview'} fill sizes="(max-width: 700px) 100vw, 45vw"/>
-      <span className="image-tag">ILLUSTRATIVE PRODUCT</span><span className="image-arrow"><ArrowUpRight size={20}/></span>
+      <SupplierImage source={"sourcePhoto" in item ? item.sourcePhoto : undefined} fallback={productImage(item.asset)} alt={"Showroom reference for "+item.name} sizes="(max-width: 700px) 100vw, 45vw"/>
+      <span className="image-tag">{"referenceCode" in item ? "SUPPLIER REFERENCE" : "PRODUCT CONCEPT"}</span><span className="image-arrow"><ArrowUpRight size={20}/></span>
     </Link>
-    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3></div><span className="product-price">Enquire for details</span></div>
+    <div className="product-caption"><div><small>{item.style} · {item.material}</small><h3><Link href={'/products/'+item.slug}>{item.name}</Link></h3>{'referenceCode' in item&&<p className="asset-note">Model: {item.referenceCode} · {item.dimensions}</p>}</div><span className="product-price">Enquire for details</span></div>
   </article>)}</div>;
 }
 
@@ -28,14 +29,14 @@ function CollectionsPreview({categorySlug}:{categorySlug?:string}){
   const category=catalogueCategories.find(([slug])=>slug===categorySlug);
   const products=categorySlug?catalogueProducts.filter(item=>item.category===categorySlug):catalogueProducts;
   return <section className="page-wrap">
-    <PreviewIntro tag="THE COLLECTIONS · PRODUCT SHOWROOM" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate supplier catalogue references by category. Inspiration remains an independent design journal. No online payments or published prices. Contact us for a tailored quotation."/>
+    <PreviewIntro tag="THE COLLECTIONS" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate supplier catalogue references by category. Inspiration remains an independent design journal. No online payments or published prices. Contact us for a tailored quotation."/>
     {!categorySlug&&<nav aria-label="Collection categories" className="category-tabs">{catalogueCategories.map(([slug,name,asset])=><Link href={'/collections/'+slug} key={slug}>
-      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>Explore available finishes</small></span><ArrowUpRight size={16}/>
+      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>{catalogueProducts.filter(item=>item.category===slug).length} showroom references</small></span><ArrowUpRight size={16}/>
     </Link>)}</nav>}
     {categorySlug&&<p style={{marginBottom:26}}><Link className="text-link" href="/collections">← All collections</Link></p>}
     <div className="results-meta"><span>{products.length} supplier catalogue references</span><span>Availability and specifications on enquiry</span></div>
     <PreviewProductCards items={products}/>
-    {products.length===0&&<p>That category is unavailable in this preview. <Link href="/collections">Browse all collections</Link>.</p>}
+    {products.length===0&&<p>That category is not currently listed. <Link href="/collections">Browse all collections</Link>.</p>}
   </section>;
 }
 
@@ -46,12 +47,13 @@ function ProductPreview({slug}:{slug:string}){
   return <section className="page-wrap"><nav className="breadcrumbs">
     <Link href="/">Home</Link><span>/</span><Link href="/collections">Collections</Link><span>/</span><Link href={'/collections/'+product.category}>{category?.[1]}</Link><span>/</span><span>{product.name}</span>
     </nav><div className="product-detail"><div className="detail-gallery">
-      <div className="gallery-main" style={{position:'relative',display:'block',aspectRatio:'3 / 2',overflow:'hidden'}}><Image src={productImage(product.asset)} alt={product.name+' product preview'} fill sizes="(max-width: 800px) 100vw, 60vw"/></div>
-      <p className="asset-note">Illustrative product image, not verified stocked merchandise or a completed installation.</p>
+      <div className="gallery-main" style={{position:'relative',display:'block',aspectRatio:'3 / 2',overflow:'hidden'}}><SupplierImage source={"sourcePhoto" in product ? product.sourcePhoto : undefined} fallback={productImage(product.asset)} alt={"Product reference: "+product.name} sizes="(max-width: 800px) 100vw, 60vw"/></div>
+      <p className="asset-note">Supplier and concept images illustrate design directions; final availability and finishes must be confirmed.</p>
     </div><div className="product-info">
       <Link className="eyebrow" href={'/collections/'+product.category}>{category?.[1]} / {product.style}</Link>
       <h1>{product.name}</h1><p className="lede">{product.description}</p>
       <p><strong>Material direction:</strong> {product.material}</p><p><strong>Illustrated finish:</strong> {product.finish}</p>
+      {'referenceCode' in product&&<><p><strong>Supplier model:</strong> {product.referenceCode}</p><p><strong>{product.dimensionKind==='packaging'?'Package measurements':product.dimensionKind==='custom'?'Dimensions':'Product dimensions'}:</strong> {product.dimensions}</p><p className="asset-note">PA Home Product Manual · PDF page {product.sourcePdfPage}. Availability, exact finish and installed dimensions are confirmed during quotation.</p></>}
       <p>Explore sample layouts in the Design Studio. Product availability and specifications are confirmed directly with our team.</p>
       <Link href={enquiryUrl({type:'product',slug:product.slug,name:product.name,quantity:1})} className="button">Request a quote on WhatsApp <ArrowUpRight size={18}/></Link>
       <AddEnquiryButton item={{type:'product',slug:product.slug,name:product.name,quantity:1,image:productImage(product.asset)}} />
@@ -93,12 +95,9 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
   else if (route === 'design-studio') content = <Designer preview/>;
   else if (route === 'contact') content = <ContactPage preview />;
   else if (route === 'cart' || route === 'checkout') content = <EnquiryBagPage />;
-  else content = <section className="page-wrap narrow"><PreviewIntro tag="PRODUCT SHOWROOM" title="Coming in the full storefront." description="This feature is not currently available. Explore our collections or contact us directly for assistance." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
+  else content = <section className="page-wrap narrow"><PreviewIntro tag="PRODUCT SHOWROOM" title="This page is not available yet." description="This feature is not currently available. Explore our collections or contact us directly for assistance." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
   return <>
     <PreviewHeader />
-    <aside aria-label="Preview notice" style={{padding: '12px 6%', background: '#eadfc9', color: '#163327', display: 'flex', flexWrap: 'wrap', gap: '8px 18px', justifyContent: 'center', textAlign: 'center', fontSize: 12}}>
-      <strong>STERLYN · PRODUCT SHOWROOM</strong><span>Browse concepts, collect enquiry items and contact us on WhatsApp. No checkout, public prices or online payments.</span>
-    </aside>
     <main id="main">{content}</main>
     <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">PRODUCT SHOWROOM</span><p>Explore our product images and 2D/3D planner. Send selected products and inspirations to the Sterlyn team through WhatsApp; checkout and payments are unavailable.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link><p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Visit our Facebook page ↗</a></p></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Product showcase · Enquiries only</span><span>WhatsApp: +44 7576 899618</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
   </>;
