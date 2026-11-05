@@ -28,12 +28,12 @@ function CollectionsPreview({categorySlug}:{categorySlug?:string}){
   const category=catalogueCategories.find(([slug])=>slug===categorySlug);
   const products=categorySlug?catalogueProducts.filter(item=>item.category===categorySlug):catalogueProducts;
   return <section className="page-wrap">
-    <PreviewIntro tag="THE COLLECTIONS · CLIENT PREVIEW" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate illustrative product previews by category. Inspiration remains an independent design journal. No online payments or published prices. Contact us for a tailored quotation."/>
+    <PreviewIntro tag="THE COLLECTIONS · PRODUCT SHOWROOM" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate supplier catalogue references by category. Inspiration remains an independent design journal. No online payments or published prices. Contact us for a tailored quotation."/>
     {!categorySlug&&<nav aria-label="Collection categories" className="category-tabs">{catalogueCategories.map(([slug,name,asset])=><Link href={'/collections/'+slug} key={slug}>
-      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>3 product directions</small></span><ArrowUpRight size={16}/>
+      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>Explore available finishes</small></span><ArrowUpRight size={16}/>
     </Link>)}</nav>}
     {categorySlug&&<p style={{marginBottom:26}}><Link className="text-link" href="/collections">← All collections</Link></p>}
-    <div className="results-meta"><span>{products.length} illustrative product previews</span><span>No live prices or stock</span></div>
+    <div className="results-meta"><span>{products.length} supplier catalogue references</span><span>Availability and specifications on enquiry</span></div>
     <PreviewProductCards items={products}/>
     {products.length===0&&<p>That category is unavailable in this preview. <Link href="/collections">Browse all collections</Link>.</p>}
   </section>;
@@ -41,7 +41,7 @@ function CollectionsPreview({categorySlug}:{categorySlug?:string}){
 
 function ProductPreview({slug}:{slug:string}){
   const product=catalogueProducts.find(item=>item.slug===slug);
-  if(!product)return <section className="page-wrap narrow"><PreviewIntro tag="COLLECTIONS" title="This product is not in the preview." description="Explore our other product images and categories."/><Link className="text-link" href="/collections">Browse collections ↗</Link></section>;
+  if(!product)return <section className="page-wrap narrow"><PreviewIntro tag="COLLECTIONS" title="This product is not currently listed." description="Explore our other product images and categories."/><Link className="text-link" href="/collections">Browse collections ↗</Link></section>;
   const category=catalogueCategories.find(([id])=>id===product.category);
   return <section className="page-wrap"><nav className="breadcrumbs">
     <Link href="/">Home</Link><span>/</span><Link href="/collections">Collections</Link><span>/</span><Link href={'/collections/'+product.category}>{category?.[1]}</Link><span>/</span><span>{product.name}</span>
@@ -93,13 +93,13 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
   else if (route === 'design-studio') content = <Designer preview/>;
   else if (route === 'contact') content = <ContactPage preview />;
   else if (route === 'cart' || route === 'checkout') content = <EnquiryBagPage />;
-  else content = <section className="page-wrap narrow"><PreviewIntro tag="CLIENT PREVIEW" title="Coming in the full storefront." description="This feature is not available in the view-only client preview. The live application and administrative features remain unchanged." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
+  else content = <section className="page-wrap narrow"><PreviewIntro tag="PRODUCT SHOWROOM" title="Coming in the full storefront." description="This feature is not currently available. Explore our collections or contact us directly for assistance." /><Link href="/" className="button" style={{marginTop: 30}}>Return to the showroom <ArrowUpRight size={18} /></Link></section>;
   return <>
     <PreviewHeader />
     <aside aria-label="Preview notice" style={{padding: '12px 6%', background: '#eadfc9', color: '#163327', display: 'flex', flexWrap: 'wrap', gap: '8px 18px', justifyContent: 'center', textAlign: 'center', fontSize: 12}}>
-      <strong>STERLYN · CLIENT PREVIEW</strong><span>Browse concepts, collect enquiry items and contact us on WhatsApp. No checkout, prices or online payments.</span>
+      <strong>STERLYN · PRODUCT SHOWROOM</strong><span>Browse concepts, collect enquiry items and contact us on WhatsApp. No checkout, public prices or online payments.</span>
     </aside>
     <main id="main">{content}</main>
-    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">CLIENT PREVIEW</span><p>Explore our product images and 2D/3D planner. Send selected products and inspirations to the Sterlyn team through WhatsApp; checkout and payments are unavailable.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link><p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Visit our Facebook page ↗</a></p></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Product showcase · Enquiries only</span><span>WhatsApp: +44 7576 899618</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
+    <footer><div className="footer-top"><div><h2>A space that’s<br/><em>entirely yours.</em></h2><Link href="/contact" className="text-link">Contact us on WhatsApp <ArrowUpRight size={20} /></Link></div><div><span className="eyebrow">PRODUCT SHOWROOM</span><p>Explore our product images and 2D/3D planner. Send selected products and inspirations to the Sterlyn team through WhatsApp; checkout and payments are unavailable.</p><Link href="/inspiration" className="text-link" style={{marginTop: 20}}>View our stories <ArrowUpRight size={18} /></Link><p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Visit our Facebook page ↗</a></p></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Sterlyn Supplies Limited</span><span>Product showcase · Enquiries only</span><span>WhatsApp: +44 7576 899618</span></div><p className="asset-note">Illustrative imagery, not verified stock, completed installations or a final product specification.</p></footer>
   </>;
 }
