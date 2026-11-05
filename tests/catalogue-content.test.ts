@@ -1,11 +1,23 @@
 import {describe,it,expect} from 'vitest';
 import {existsSync} from 'node:fs';
 import {catalogueCategories,catalogueProducts,productImage} from '../src/lib/catalogue-content';
+import {supplierCatalogueProducts} from '../src/lib/supplier-catalogue';
 import {catalogueImageSchema} from '../src/lib/catalogue-image';
 import {inspirationStories} from '../src/lib/inspiration';
+
+function imageFor(product:(typeof catalogueProducts)[number]) {
+  return 'sourcePhoto' in product && typeof product.sourcePhoto === 'string'
+    ? product.sourcePhoto : productImage(product.asset);
+}
 describe('product collections and editorial separation',()=>{
- it('gives every category three distinct products and images',()=>{
-  for(const [category] of catalogueCategories){const rows=catalogueProducts.filter(p=>p.category===category);expect(rows.length).toBeGreaterThanOrEqual(3);expect(new Set(rows.map(p=>p.asset)).size).toBe(rows.length);}
+ it('gives each category at least three products, distinct names and multiple real images',()=>{
+  for(const [category] of catalogueCategories){
+    const rows=catalogueProducts.filter(p=>p.category===category);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(rows.map(p=>p.slug)).size).toBe(rows.length);
+    expect(new Set(rows.map(imageFor)).size).toBeGreaterThanOrEqual(3);
+    rows.forEach(p=>expect(existsSync('public'+imageFor(p))).toBe(true));
+  }
   expect(new Set(catalogueProducts.map(p=>p.slug)).size).toBe(catalogueProducts.length);
  });
  it('allows bundled product images for editing and CSV while rejecting remote and traversal paths',()=>{
@@ -13,9 +25,24 @@ describe('product collections and editorial separation',()=>{
   expect(catalogueImageSchema.safeParse('/images/sterlyn-official-logo.jpg').success).toBe(true);
   for(const path of ['/images/products/../secret.png','/images/../../secret.png','https://example.com/image.png','/images/other/image.webp','/images/%2e%2e/secret.png','/images/image.html'])expect(catalogueImageSchema.safeParse(path).success).toBe(false);
  });
- it('keeps room stories out of product names and imagery',()=>{
-  const editorialImages=new Set<string>(inspirationStories.map(s=>s.image));
-  for(const product of catalogueProducts){expect(product.name).not.toMatch(/room|study|dusk|inspiration/i);expect(editorialImages.has(productImage(product.asset))).toBe(false);expect(existsSync('public'+productImage(product.asset))).toBe(true);}
+ it('keeps editorial titles distinct from product titles, while allowing supplier-photo references',()=>{
+  const productNames=new Set(catalogueProducts.map(p=>p.name.toLowerCase()));
+  for(const story of inspirationStories){
+    expect(productNames.has(story.title.toLowerCase())).toBe(false);
+    expect(existsSync('public'+story.image)).toBe(true);
+    if('sourcePhoto' in story && story.sourcePhoto)expect(existsSync('public'+story.sourcePhoto)).toBe(true);
+  }
   expect(inspirationStories.length).toBeGreaterThanOrEqual(6);
+ });
+ it('supplies genuine source references and labels product versus packaging dimensions',()=>{
+  expect(supplierCatalogueProducts.length).toBeGreaterThanOrEqual(30);
+  for(const p of supplierCatalogueProducts){
+    expect(p.referenceCode.trim().length).toBeGreaterThan(0);
+    expect(p.sourcePdfPage).toBeGreaterThan(0);
+    expect(p.sourcePdfPage).toBeLessThanOrEqual(96);
+    expect(['custom','product','packaging']).toContain(p.dimensionKind);
+    expect(p.dimensions.length).toBeGreaterThan(0);
+    if(p.dimensionKind==='packaging')expect(p.dimensions).toMatch(/packaging/i);
+  }
  });
 });

@@ -21,7 +21,7 @@ export default function PreviewHeader() {
       <Link href="/" className="brand" aria-label="Sterlyn Supplies home" onClick={() => setOpen(false)}>
         <img className="brand-mark" src="/images/sterlyn-monogram-clean.svg" alt="Sterlyn Supplies" />
       </Link>
-      <nav aria-label="Preview navigation" className={open ? 'main-nav open' : 'main-nav'}>
+      <nav aria-label="Main navigation" className={open ? 'main-nav open' : 'main-nav'}>
         {links.map(([href, name]) => <Link href={href} key={href} className={pathname === href ? 'active' : ''} onClick={() => setOpen(false)}>{name}</Link>)}
         <Link href="/design-studio" className="mobile-studio" onClick={() => setOpen(false)}>Design your space <ArrowUpRight size={16} /></Link>
         <Link href="/cart" className="mobile-studio" onClick={() => setOpen(false)}>Your enquiry list <ArrowUpRight size={16} /></Link>
