@@ -8,7 +8,7 @@ import { ArrowUpRight, ClipboardList, Mail, MessageCircle, Phone, Trash2 } from 
 import {
   addEnquiryItem, BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP, ENQUIRY_EVENT,
   enquiryItemUrl, enquiryKey, enquiryUrl, readDirectEnquiry, readEnquiryBag,
-  writeEnquiryBag, type EnquiryItem,
+  whatsappEnquiryText, writeEnquiryBag, type EnquiryItem,
 } from '@/lib/enquiry';
 
 function useEnquiryBag(): EnquiryItem[] {
