@@ -138,7 +138,12 @@ export function ContactPage({preview=false}:{preview?:boolean}) {
     setRemovedMessage(item.name + ' removed from your enquiry.');
   }
   async function submit(event:React.FormEvent<HTMLFormElement>){
-    event.preventDefault();if(submitting.current||preview)return;
+    event.preventDefault();if(submitting.current)return;
+    if(preview){
+      const safeNotes = [notes, email.trim() ? 'Contact email: '+email.trim() : '', phone.trim() ? 'Contact phone: '+phone.trim() : '', scene ? 'Room design: '+scene.width+'m × '+scene.depth+'m ('+scene.modules.length+' illustrative modules)' : ''].filter(Boolean).join('\n');
+      window.location.assign('https://wa.me/'+BUSINESS_WHATSAPP+'?text='+encodeURIComponent(whatsappEnquiryText(selected,name,safeNotes)));
+      return;
+    }
     submitting.current=true;setBusy(true);setError('');
     const submitted=selected.map(item=>({...item}));
     const payload={name,email,phone,notes,scene,items:submitted.map(({type,slug,quantity,finish})=>({type,slug,quantity,finish}))};
@@ -165,7 +170,7 @@ export function ContactPage({preview=false}:{preview?:boolean}) {
     <div className="enquiry-contact-grid">
       <div className="enquiry-contact-main">
         {saved?<section className="enquiry-success" role="status"><h2>Your enquiry is saved.</h2><p>Your reference: <strong>{saved.reference}</strong></p><p>Continue to WhatsApp to review and send your message. Opening the link does not send it automatically.</p><a className="button" href={saved.whatsappUrl}>Continue to WhatsApp <ArrowUpRight size={18}/></a><button type="button" className="text-link" onClick={startNew}>Start a new enquiry</button></section>:<>
-        {preview&&<p className="enquiry-preview-notice" role="note">Visual preview: enquiry saving is unavailable here. Contact our team directly using WhatsApp.</p>}
+        {preview&&<p className="enquiry-preview-notice" role="note">You can send your details and selected products directly through WhatsApp. Enquiries are not saved to an online customer account yet.</p>}
         <span className="eyebrow">YOUR ENQUIRY</span>
         {selected.length ? <>
           <h2>What you’re enquiring about</h2>
@@ -193,11 +198,11 @@ export function ContactPage({preview=false}:{preview?:boolean}) {
             <textarea disabled={busy} maxLength={3000} rows={5} value={notes} onChange={event => setNotes(event.target.value)}
               placeholder="Room dimensions, preferred materials, location, or any questions…" /></label>
         </div>
-        <button className="button enquiry-whatsapp" disabled={busy||preview}>
-          <MessageCircle size={19}/> {busy?'Saving your enquiry…':'Save enquiry & continue to WhatsApp'} <ArrowUpRight size={18}/>
+        <button className="button enquiry-whatsapp" disabled={busy}>
+          <MessageCircle size={19}/> {busy?'Preparing your enquiry…':preview?'Continue to WhatsApp':'Save enquiry & continue to WhatsApp'} <ArrowUpRight size={18}/>
         </button>
         {error&&<p role="alert">{error}</p>}
-        <p className="asset-note">We save your enquiry first, then open WhatsApp with your reference and selections. Review and press Send in WhatsApp. No payment is taken on this website.</p>
+        <p className="asset-note">{preview?'Your enquiry details will open as a WhatsApp message for you to review and send. This website does not store the enquiry online yet. No payment is taken here.':'We save your enquiry first, then open WhatsApp with your reference and selections. Review and press Send in WhatsApp. No payment is taken on this website.'}</p>
         </form></>}
 
       </div>
