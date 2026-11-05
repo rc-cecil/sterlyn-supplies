@@ -14,9 +14,10 @@ import { enquiryUrl, BUSINESS_FACEBOOK } from '@/lib/enquiry';
 
 /** Database-free showroom until a live database is explicitly connected. */
 type CatalogueItem = (typeof catalogueProducts)[number];
+function isStudioProduct(item:CatalogueItem):boolean{return 'sourcePhoto' in item && typeof item.sourcePhoto==='string' && /\/(tap-|sink-|basin-|storage-)/.test(item.sourcePhoto);}
 
 function PreviewProductCards({items,featured=false}:{items:readonly CatalogueItem[];featured?:boolean}){
-  return <div className={featured?'editorial-grid':'product-grid'}>{items.map(item=><article className="product-card" key={item.slug}>
+  return <div className={featured?'editorial-grid':'product-grid'}>{items.map(item=><article className={isStudioProduct(item)?"product-card studio-product":"product-card"} key={item.slug}>
     <Link href={'/products/'+item.slug} className="product-image">
       <SupplierImage source={"sourcePhoto" in item ? item.sourcePhoto : undefined} fallback={productImage(item.asset)} alt={"Showroom reference for "+item.name} sizes="(max-width: 700px) 100vw, 45vw"/>
       <span className="image-tag">{"referenceCode" in item ? "SUPPLIER REFERENCE" : "PRODUCT CONCEPT"}</span><span className="image-arrow"><ArrowUpRight size={20}/></span>
@@ -47,7 +48,7 @@ function ProductPreview({slug}:{slug:string}){
   return <section className="page-wrap"><nav className="breadcrumbs">
     <Link href="/">Home</Link><span>/</span><Link href="/collections">Collections</Link><span>/</span><Link href={'/collections/'+product.category}>{category?.[1]}</Link><span>/</span><span>{product.name}</span>
     </nav><div className="product-detail"><div className="detail-gallery">
-      <div className="gallery-main" style={{position:'relative',display:'block',aspectRatio:'3 / 2',overflow:'hidden'}}><SupplierImage source={"sourcePhoto" in product ? product.sourcePhoto : undefined} fallback={productImage(product.asset)} alt={"Product reference: "+product.name} sizes="(max-width: 800px) 100vw, 60vw"/></div>
+      <div className={isStudioProduct(product)?'gallery-main studio-product-image':'gallery-main'} style={{position:'relative',display:'block',aspectRatio:isStudioProduct(product)?'4 / 3':'3 / 2',overflow:'hidden'}}><SupplierImage source={"sourcePhoto" in product ? product.sourcePhoto : undefined} fallback={productImage(product.asset)} alt={"Product reference: "+product.name} sizes="(max-width: 800px) 100vw, 60vw"/></div>
       <p className="asset-note">Supplier and concept images illustrate design directions; final availability and finishes must be confirmed.</p>
     </div><div className="product-info">
       <Link className="eyebrow" href={'/collections/'+product.category}>{category?.[1]} / {product.style}</Link>
@@ -56,7 +57,7 @@ function ProductPreview({slug}:{slug:string}){
       {'referenceCode' in product&&<><p><strong>Supplier model:</strong> {product.referenceCode}</p><p><strong>{product.dimensionKind==='packaging'?'Package measurements':product.dimensionKind==='custom'?'Dimensions':'Product dimensions'}:</strong> {product.dimensions}</p><p className="asset-note">PA Home Product Manual · PDF page {product.sourcePdfPage}. Availability, exact finish and installed dimensions are confirmed during quotation.</p></>}
       <p>Explore sample layouts in the Design Studio. Product availability and specifications are confirmed directly with our team.</p>
       <Link href={enquiryUrl({type:'product',slug:product.slug,name:product.name,quantity:1})} className="button">Request a quote on WhatsApp <ArrowUpRight size={18}/></Link>
-      <AddEnquiryButton item={{type:'product',slug:product.slug,name:product.name,quantity:1,image:productImage(product.asset)}} />
+      <AddEnquiryButton item={{type:'product',slug:product.slug,name:product.name,quantity:1,image:'sourcePhoto' in product&&product.sourcePhoto?product.sourcePhoto:productImage(product.asset)}} />
       <Link href="/design-studio" className="text-link">Explore the Design Studio <ArrowUpRight size={18}/></Link>
       <p style={{marginTop:28}}><Link className="text-link" href={'/collections/'+product.category}>← Back to {category?.[1]}</Link></p>
     </div></div></section>;
