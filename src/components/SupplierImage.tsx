@@ -8,6 +8,7 @@ export default function SupplierImage({source, fallback, alt, sizes, priority = 
 }) {
   const [src,setSrc]=useState(source || fallback);
   useEffect(()=>{setSrc(source || fallback);},[source,fallback]);
-  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority}
+  const contain = !!source && /\/(tap-|sink-|basin-|storage-)/.test(source);
+  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={{objectFit:contain?"contain":"cover"}}
     onError={()=>{if(src!==fallback)setSrc(fallback);}}/>;
 }
