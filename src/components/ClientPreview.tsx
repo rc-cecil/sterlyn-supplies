@@ -52,7 +52,7 @@ function ProductPreview({slug}:{slug:string}){
     </div><div className="product-info">
       <Link className="eyebrow" href={'/collections/'+product.category}>{category?.[1]} / {product.style}</Link>
       <h1>{product.name}</h1><p className="lede">{product.description}</p>
-      <p><strong>Material direction:</strong> {product.material}</p><p><strong>Illustrated finish:</strong> {product.finish}</p>
+      <p><strong>Material direction:</strong> {product.material}</p><p><strong>Illustrated finish:</strong> {product.finish}</p><p><strong>Colour:</strong> <span aria-hidden="true" style={{display:'inline-block',backgroundColor:product.color,width:22,height:22,border:'1px solid #bbb',verticalAlign:'middle',borderRadius:'50%'}}/> {product.finish}</p>
       {'referenceCode' in product&&<><p><strong>Supplier model:</strong> {product.referenceCode}</p><p><strong>{product.dimensionKind==='packaging'?'Package measurements':product.dimensionKind==='custom'?'Dimensions':'Product dimensions'}:</strong> {product.dimensions}</p><p className="asset-note">PA Home Product Manual · PDF page {product.sourcePdfPage}. Availability, exact finish and installed dimensions are confirmed during quotation.</p></>}
       <p>Explore sample layouts in the Design Studio. Product availability and specifications are confirmed directly with our team.</p>
       <Link href={enquiryUrl({type:'product',slug:product.slug,name:product.name,quantity:1})} className="button">Request a quote on WhatsApp <ArrowUpRight size={18}/></Link>
