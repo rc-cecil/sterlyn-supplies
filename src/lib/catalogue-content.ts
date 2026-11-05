@@ -1,10 +1,13 @@
+import { supplierCatalogueProducts } from './supplier-catalogue';
 /** Illustrative product directions, not verified stock or a supplier catalogue. */
 export const catalogueCategories = [
   ['kitchens','Fitted kitchens','forest-shaker'],
   ['cabinetry','Cabinetry','walnut-base-cabinet'],
   ['islands','Islands & peninsulas','stone-waterfall-island'],
   ['worktops','Worktops','veined-stone-worktop'],
-  ['sinks','Sinks & taps','steel-undermount-sink'],
+  ['sinks','Kitchen sinks','steel-undermount-sink'],
+  ['taps','Kitchen taps','steel-undermount-sink'],
+  ['bathrooms','Bathroom basins','ceramic-apron-sink'],
   ['storage','Storage','pull-out-pantry'],
 ] as const;
 
@@ -28,5 +31,6 @@ export const catalogueProducts = [
   {slug:'storage-study',name:'Pull-out Pantry Storage',category:'storage',style:'Modern',material:'Hardware',asset:'pull-out-pantry',finish:'Graphite hardware direction',color:'#686c65',description:'A tall pull-out pantry arrangement with accessible baskets. Load ratings, runner system and cabinet compatibility need supplier confirmation.'},
   {slug:'corner-pull-out',name:'Corner Pull-out Shelves',category:'storage',style:'Contemporary',material:'Hardware',asset:'corner-pull-out',finish:'Steel hardware direction',color:'#a4aaa8',description:'A swing-out shelf arrangement for corner base cabinetry. Opening side, clearances and mechanism are confirmed during planning.'},
   {slug:'drawer-organiser',name:'Oak Drawer Organiser',category:'storage',style:'Classic',material:'Wood',asset:'drawer-organiser',finish:'Natural oak tone',color:'#b08c60',description:'A compartmented wood-tone drawer insert for cutlery and utensils. Final compartment sizes and drawer fit are specified with your quotation.'},
+  ...supplierCatalogueProducts,
 ] as const;
 export const productImage = (asset:string) => `/images/products/${asset}.webp`;
