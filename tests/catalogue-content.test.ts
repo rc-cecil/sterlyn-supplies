@@ -11,6 +11,8 @@ function imageFor(product:(typeof catalogueProducts)[number]) {
 }
 describe('product collections and editorial separation',()=>{
  it('gives each category at least three products, distinct names and multiple real images',()=>{
+  expect(catalogueCategories.map(([slug])=>slug)).toEqual(['kitchens','cabinetry','islands','worktops','sinks']);
+  expect(catalogueProducts).toHaveLength(22);
   for(const [category] of catalogueCategories){
     const rows=catalogueProducts.filter(p=>p.category===category);
     expect(rows.length).toBeGreaterThanOrEqual(3);
@@ -19,9 +21,12 @@ describe('product collections and editorial separation',()=>{
     rows.forEach(p=>expect(existsSync('public'+imageFor(p))).toBe(true));
   }
   expect(new Set(catalogueProducts.map(p=>p.slug)).size).toBe(catalogueProducts.length);
+  expect(catalogueProducts.every(p=>!['bathrooms','taps','storage'].includes(p.category))).toBe(true);
+  expect(catalogueProducts.every(p=>!/wardrobe|closet|bathroom|vanity|basin/i.test(p.name))).toBe(true);
  });
  it('allows bundled product images for editing and CSV while rejecting remote and traversal paths',()=>{
   expect(catalogueImageSchema.safeParse('/images/products/forest-shaker.webp').success).toBe(true);
+  expect(catalogueImageSchema.safeParse('/images/supplier/tap-chrome-1218.webp').success).toBe(true);
   expect(catalogueImageSchema.safeParse('/images/sterlyn-official-logo.jpg').success).toBe(true);
   for(const path of ['/images/products/../secret.png','/images/../../secret.png','https://example.com/image.png','/images/other/image.webp','/images/%2e%2e/secret.png','/images/image.html'])expect(catalogueImageSchema.safeParse(path).success).toBe(false);
  });
@@ -35,7 +40,9 @@ describe('product collections and editorial separation',()=>{
   expect(inspirationStories.length).toBeGreaterThanOrEqual(6);
  });
  it('supplies genuine source references and labels product versus packaging dimensions',()=>{
-  expect(supplierCatalogueProducts.length).toBeGreaterThanOrEqual(30);
+  expect(supplierCatalogueProducts).toHaveLength(4);
+  expect(supplierCatalogueProducts.map(p=>p.category)).toEqual(['kitchens','sinks','sinks','sinks']);
+  expect(new Set(supplierCatalogueProducts.map(p=>p.referenceCode)).size).toBe(4);
   for(const p of supplierCatalogueProducts){
     expect(p.referenceCode.trim().length).toBeGreaterThan(0);
     expect(p.sourcePdfPage).toBeGreaterThan(0);

@@ -15,7 +15,7 @@ export async function syncCatalogueContent(){
   for(const entry of catalogueProducts){
    const category=await tx.category.findUniqueOrThrow({where:{slug:entry.category}});
    const existing=await tx.product.findUnique({where:{slug:entry.slug},include:{variants:true}});
-   const image=productImage(entry.asset);
+   const image='sourcePhoto' in entry && typeof entry.sourcePhoto==='string' ? entry.sourcePhoto : productImage(entry.asset);
    const data={name:entry.name,description:entry.description,categoryId:category.id,style:entry.style,material:entry.material,image,gallery:[image],illustrative:true,featured:entry.category==='kitchens'};
    if(!existing){
     await tx.product.create({data:{...data,slug:entry.slug,status:'published',variants:{create:[{sku:'CONCEPT-'+entry.slug.toUpperCase()+'-A',name:entry.finish,color:entry.color},{sku:'CONCEPT-'+entry.slug.toUpperCase()+'-B',name:entry.category==='kitchens'?'Warm ivory':'Alternative finish — discuss',color:'#d7cebd'}]}}});counts.created++;
