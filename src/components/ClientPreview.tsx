@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import Hero from '@/components/Hero';
@@ -30,12 +31,12 @@ function CollectionsPreview({categorySlug}:{categorySlug?:string}){
   const category=catalogueCategories.find(([slug])=>slug===categorySlug);
   const products=categorySlug?catalogueProducts.filter(item=>item.category===categorySlug):catalogueProducts;
   return <section className="page-wrap">
-    <PreviewIntro tag="THE COLLECTIONS" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Browse separate supplier catalogue references by category. Inspiration remains an independent design journal. No online payments or published prices. Contact us for a tailored quotation."/>
+    <PreviewIntro tag="THE COLLECTIONS" title={category?category[1]:'Considered pieces. Complete kitchens.'} description="Explore our kitchen showroom: fitted kitchens, cabinetry and kitchen storage, islands, worktops, and sinks and taps. Contact us for a tailored quotation; no online prices or payments."/>
     {!categorySlug&&<nav aria-label="Collection categories" className="category-tabs">{catalogueCategories.map(([slug,name,asset])=><Link href={'/collections/'+slug} key={slug}>
-      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>{catalogueProducts.filter(item=>item.category===slug).length} showroom references</small></span><ArrowUpRight size={16}/>
+      <span className="category-picture"><Image src={productImage(asset)} alt={name} fill sizes="(max-width: 760px) 130px, 200px"/></span><span>{name}<small>{catalogueProducts.filter(item=>item.category===slug).length} products</small></span><ArrowUpRight size={16}/>
     </Link>)}</nav>}
     {categorySlug&&<p style={{marginBottom:26}}><Link className="text-link" href="/collections">← All collections</Link></p>}
-    <div className="results-meta"><span>{products.length} supplier catalogue references</span><span>Availability and specifications on enquiry</span></div>
+    <div className="results-meta"><span>{products.length} curated products</span><span>Availability and specifications on enquiry</span></div>
     <PreviewProductCards items={products}/>
     {products.length===0&&<p>That category is not currently listed. <Link href="/collections">Browse all collections</Link>.</p>}
   </section>;
@@ -69,7 +70,7 @@ function HomePreview() {
     <section className="intro-section"><div className="intro-label"><span className="small-rule" /> A MORE CONSIDERED HOME</div><div><h2>Not just a kitchen.<br/><em>Your favourite place to be.</em></h2><p>Quiet mornings. Conversations that linger. Beautiful spaces shaped around the way you live.</p></div></section>
     <section className="collections-section">
       <div className="section-heading"><h2>Kitchen collections.<br/><em>Considered details.</em></h2><div><p>Browse the separate fitted kitchen product images, distinct from our Inspiration journal.</p><Link className="text-link" href="/collections">Discover the collections <ArrowUpRight size={18} /></Link></div></div>
-      <PreviewProductCards items={catalogueProducts.filter(item=>item.category==='kitchens')} featured/>
+      <PreviewProductCards items={catalogueProducts.filter(item=>item.category==='kitchens').slice(0,3)} featured/>
     </section>
     <section className="studio-promo">
       <div className="studio-promo-image"><Image src="/images/kitchen-walnut-v2.webp" alt="Illustrative walnut kitchen" fill sizes="(max-width: 700px) 100vw, 60vw" /></div>
@@ -84,6 +85,10 @@ function PreviewIntro({tag, title, description}: {tag: string; title: string; de
 }
 
 export default function ClientPreview({ route, slug }: { route: string; slug: string[] }) {
+  // Legacy category links should resolve to one canonical collection instead of creating empty or duplicate sections.
+  if (route === 'collections' && slug[1] === 'storage') redirect('/collections/cabinetry');
+  if (route === 'collections' && slug[1] === 'taps') redirect('/collections/sinks');
+  if (route === 'collections' && slug[1] === 'bathrooms') redirect('/collections');
   let content: ReactNode;
   if (route === 'home' || route === 'shop') content = <HomePreview />;
   else if (route === 'collections') content = <CollectionsPreview categorySlug={slug[1]}/>;
