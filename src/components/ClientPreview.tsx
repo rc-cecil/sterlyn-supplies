@@ -1,6 +1,5 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import Hero from '@/components/Hero';
@@ -85,10 +84,6 @@ function PreviewIntro({tag, title, description}: {tag: string; title: string; de
 }
 
 export default function ClientPreview({ route, slug }: { route: string; slug: string[] }) {
-  // Legacy category links should resolve to one canonical collection instead of creating empty or duplicate sections.
-  if (route === 'collections' && slug[1] === 'storage') redirect('/collections/cabinetry');
-  if (route === 'collections' && slug[1] === 'taps') redirect('/collections/sinks');
-  if (route === 'collections' && slug[1] === 'bathrooms') redirect('/collections');
   let content: ReactNode;
   if (route === 'home' || route === 'shop') content = <HomePreview />;
   else if (route === 'collections') content = <CollectionsPreview categorySlug={slug[1]}/>;
