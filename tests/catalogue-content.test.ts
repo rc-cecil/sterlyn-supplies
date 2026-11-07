@@ -26,6 +26,7 @@ describe('product collections and editorial separation',()=>{
  });
  it('allows bundled product images for editing and CSV while rejecting remote and traversal paths',()=>{
   expect(catalogueImageSchema.safeParse('/images/products/forest-shaker.webp').success).toBe(true);
+  expect(catalogueImageSchema.safeParse('/images/supplier/tap-chrome-1218.webp').success).toBe(true);
   expect(catalogueImageSchema.safeParse('/images/sterlyn-official-logo.jpg').success).toBe(true);
   for(const path of ['/images/products/../secret.png','/images/../../secret.png','https://example.com/image.png','/images/other/image.webp','/images/%2e%2e/secret.png','/images/image.html'])expect(catalogueImageSchema.safeParse(path).success).toBe(false);
  });
