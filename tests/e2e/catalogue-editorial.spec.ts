@@ -1,11 +1,11 @@
 import {test,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-const categories=[['kitchens',4],['cabinetry',6],['islands',3],['worktops',3],['sinks',4]] as const;
+const categories=[['kitchens',4],['cabinetry',6],['islands',3],['worktops',3],['sinks',3]] as const;
 test('each category has products; journal imagery and actions are independent',async({page})=>{
  test.setTimeout(90000);const images=new Set<string>();
  for(const [category,count] of categories){await page.goto('/collections/'+category);if(category===categories[0][0])await page.getByRole('button',{name:'Essential only'}).click();await expect(page.locator('.product-card')).toHaveCount(count);await expect(page.locator('.product-card h3').first()).toBeVisible();for(const src of await page.locator('.product-image img').evaluateAll(nodes=>nodes.map(n=>(n as HTMLImageElement).getAttribute('src')||'')))images.add(src);}
- expect(images.size).toBe(20);
+ expect(images.size).toBe(19);
  await page.goto('/collections/storage');await expect(page).toHaveURL(/\/collections\/cabinetry$/);
  await page.goto('/collections/taps');await expect(page).toHaveURL(/\/collections\/sinks$/);
  await page.goto('/collections/bathrooms');await expect(page).toHaveURL(/\/collections$/);

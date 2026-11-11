@@ -1,5 +1,5 @@
 import {inspirationWorkspace,saveInspiration} from '@/lib/inspiration-content';
-import {createEnquiry,updateEnquiry,updateOrder,recordReceipt,shareTracking,trackingCommand,lookupTracking,recoverTracking,showroomRead,customerCommand,businessSettings} from '@/lib/showroom';
+import {createManualEnquiry,createEnquiry,updateEnquiry,updateOrder,recordReceipt,shareTracking,trackingCommand,lookupTracking,recoverTracking,showroomRead,customerCommand,businessSettings} from '@/lib/showroom';
 import {withRequestContext,requestCorrelationId,logFailure} from '@/lib/request-context';
 import {HeadBucketCommand} from '@aws-sdk/client-s3';
 import {scannerReadiness} from '@/lib/media-scan';
@@ -53,6 +53,7 @@ else if(route==='tracking/lookup'){await limit(req,'tracking-lookup',20);result=
 else if(route==='tracking/recover'){await limit(req,'tracking-recovery',3);result=await recoverTracking(body);}
 else if(route==='cart')throw new HttpError(410,'Use the showroom enquiry list and submit through Contact.');
 else if(route==='quotes'||route==='quotes/respond')throw new HttpError(410,'Please submit your enquiry through Contact and continue with our team on WhatsApp.');
+else if(route==='admin/manual-enquiry')result=await createManualEnquiry(body);
 else if(route==='admin/enquiries'||route==='admin/quotes')result=await updateEnquiry(body);
 else if(route==='admin/orders'||route==='admin/fulfillment')result=await updateOrder(body);
 else if(route==='admin/receipts')result=await recordReceipt(body);

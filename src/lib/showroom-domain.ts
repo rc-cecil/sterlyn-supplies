@@ -14,7 +14,7 @@ export const enquiryInput=z.object({
   items:z.array(z.object({type:z.enum(['product','inspiration']),slug:z.string().min(1).max(150),quantity:z.number().int().min(1).max(99),finish:z.string().trim().max(120).optional()})).max(40),
   scene:sceneSchema.optional(),
 });
-export const itemSnapshot=z.object({type:z.enum(['product','inspiration','design']).default('product'),slug:z.string().optional(),name:z.string().min(1),quantity:z.number().int().min(1).max(99),finish:z.string().optional(),image:z.string().optional(),variantId:z.string().optional(),sku:z.string().optional()});
+export const itemSnapshot=z.object({type:z.enum(['product','inspiration','design','custom']).default('product'),slug:z.string().optional(),name:z.string().min(1),quantity:z.number().int().min(1).max(99),finish:z.string().optional(),image:z.string().optional(),variantId:z.string().optional(),sku:z.string().optional()});
 export type ItemSnapshot=z.infer<typeof itemSnapshot>;
 export function canonicalEnquiryStatus(status:string){return ({reviewing:'contacted',quoted:'awaiting_customer',accepted:'agreed'} as Record<string,string>)[status]||status;}
 export function canonicalOrderStatus(status:string){return ({awaiting_confirmation:'confirmed',paid:'confirmed',shipped:'dispatched'} as Record<string,string>)[status]||status;}

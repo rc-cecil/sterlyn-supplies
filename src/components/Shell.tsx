@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Menu, Search, X, ArrowUpRight, UserRound } from 'lucide-react';
 import { EnquiryBasketLink } from './ShowcaseEnquiry';
-import { BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP } from '@/lib/enquiry';
+import { BUSINESS_FACEBOOK, GENERAL_WHATSAPP_URL } from '@/lib/enquiry';
 
 export function Header(){
   const path=usePathname();
@@ -48,7 +48,7 @@ export function Footer(){
         <div>
           <span className="eyebrow">LET’S TALK</span>
           <p>Explore our collections, save your ideas and request a quotation directly. No checkout or payments on this website.</p>
-          <p><a className="text-link" href={'https://wa.me/'+BUSINESS_WHATSAPP} target="_blank" rel="noopener noreferrer">WhatsApp: {BUSINESS_PHONE} ↗</a></p>
+          <p><a className="text-link" href={GENERAL_WHATSAPP_URL} target="_blank" rel="noopener noreferrer">Chat on WhatsApp ↗</a></p>
           <p><a className="text-link" href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer">Follow us on Facebook ↗</a></p>
         </div>
       </div>

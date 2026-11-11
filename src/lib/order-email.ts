@@ -10,7 +10,7 @@ export function orderEmail(data:{name:string;reference:string;status:string;expe
   return {subject:`${data.reference} · ${title}`,body,html};
 }
 export async function queueOrderEmail(tx:Prisma.TransactionClient,order:{id:string;name:string;email:string;reference:string|null;status:string;trackingCipher:string|null;trackingRevokedAt:Date|null;expectedDelivery:Date|null},eventId:string,publicNote?:string|null){
-  if(!order.trackingCipher||order.trackingRevokedAt)return;
+  if(!order.email||!order.trackingCipher||order.trackingRevokedAt)return;
   const override=(await tx.setting.findUnique({where:{key:'notificationTemplates'}}))?.value as Record<string,string>|undefined;
   const mail=orderEmail({name:order.name,reference:order.reference||order.id,status:order.status,expectedDelivery:order.expectedDelivery,publicNote,url:trackingUrl(order.trackingCipher),description:override?.[order.status]});
   await tx.notification.create({data:{...mail,recipient:order.email,dedupeKey:`order:${order.id}:${eventId}`,templateData:{version:1,orderId:order.id,eventId,status:order.status}}});

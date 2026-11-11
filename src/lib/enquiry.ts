@@ -9,6 +9,7 @@ export type EnquiryItem = {
 
 export const BUSINESS_WHATSAPP = '447576899618';
 export const BUSINESS_PHONE = '+447576899618';
+export const GENERAL_WHATSAPP_URL = 'https://wa.me/' + BUSINESS_WHATSAPP + '?text=' + encodeURIComponent('Hi Sterlyn, I’m enquiring from your website.');
 export const BUSINESS_FACEBOOK = 'https://www.facebook.com/61595476006250/?hpir=1';
 export const ENQUIRY_STORAGE_KEY = 'sterlyn-enquiry-selection-v1';
 export const ENQUIRY_EVENT = 'sterlyn-enquiry-change';

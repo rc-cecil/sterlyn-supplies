@@ -2,11 +2,19 @@
 
 Staff are people working for the business. The owner manages access and assignments; the website records actions and keeps tracking current.
 
+## Customers who contact you directly on WhatsApp
+
+Open **Enquiries → Add WhatsApp enquiry**. Enter the customer's name, WhatsApp number with country code, what they need and quantity. Email and extra requirements are optional. Choose **Direct WhatsApp**, **Website WhatsApp**, **Phone** or **Other**, then save. The form closes, an SQ reference appears, and the enquiry opens with its source in Recent activity. It is assigned to the staff member recording it; owner/admin can reassign it.
+
+Confirm the agreement using the same action below. Phone-only requests still get a private tracking link; no email is invented or queued. Use **Share tracking in WhatsApp** to open a draft for that customer, then review and send it yourself. On an existing order, **Copy tracking link** also reveals the WhatsApp sharing action. If the customer provides an email later, you can add it while confirming the order.
+
+General website WhatsApp buttons draft “Hi Sterlyn, I’m enquiring from your website.” The business number is not printed on the public page, though WhatsApp links necessarily contain the destination number. Clicking a link does not prove a message was sent and does not create a named enquiry. Staff record those conversations with the action above. The site cannot automatically read private WhatsApp chats; future official webhook integration is a separate configuration project.
+
 ## Owner: confirm the agreement once
 
 1. Open **Enquiries** and choose the customer's request.
 2. Choose **Confirm order & tracking**. Enter the agreed amount and delivery address, check the agreement confirmation, then confirm. You can optionally choose a colleague to handle the order.
-3. The edit form closes. A saved confirmation shows the order reference and **Copy customer tracking link**. One confirmation email is queued automatically. You do not need a separate Agreed save or an internal note.
+3. The edit form closes. A saved confirmation shows the order reference and **Copy customer tracking link**. One confirmation email is queued automatically when an email address is recorded. You do not need a separate Agreed save or an internal note.
 
 The private tracking link works immediately. **Email delivery is on hold**, so queued email is not sent. The personal sender configuration has been removed. No company mailbox or external email service is connected by this change.
 

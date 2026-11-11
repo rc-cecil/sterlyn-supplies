@@ -57,9 +57,22 @@ export async function createEnquiry(input:unknown){
   const prior=await db.quote.findUnique({where:{requestKey:v.requestKey}});if(prior&&matchesHash(prior.requestHash,fingerprint))return enquiryResult(prior);
  }throw error;}
 }
+// Staff record conversations that happen outside the website; no WhatsApp message access is implied.
+export async function createManualEnquiry(input:unknown){
+ const actor=await staff('quotes');
+ const v=z.object({requestKey:z.uuid(),name:z.string().trim().min(2).max(100),phone:z.string().trim().regex(/^\+[1-9]\d{6,14}$/, 'Include the country code, for example +233…'),email:z.union([z.email().max(254),z.literal('')]).default('').transform(value=>value.toLowerCase()),description:z.string().trim().min(3).max(180),quantity:z.number().int().min(1).max(99).default(1),notes:z.string().trim().max(4000).default(''),source:z.enum(['Direct WhatsApp','Website WhatsApp','Phone','Other']).default('Direct WhatsApp')}).parse(input);
+ const fingerprint=hash(JSON.stringify({actorId:actor.id,...v}));
+ const result=(quote:{id:string;reference:string;assignedTo:string|null})=>{assignedAccess(actor,quote.assignedTo);return {enquiry:{id:quote.id,reference:quote.reference},message:quote.reference+' saved. Confirm the order here once the customer agrees.'};};
+ const replay=async()=>{const quote=await db.quote.findUnique({where:{requestKey:v.requestKey}});if(!quote)return null;if(quote.requestHash!==fingerprint)throw new HttpError(409,'This submission key belongs to a different enquiry.');return result(quote);};
+ const existing=await replay();if(existing)return existing;
+ try{return await db.$transaction(async tx=>{
+  const quote=await tx.quote.create({data:{name:v.name,email:v.email,phone:v.phone,notes:v.notes,assignedTo:actor.id,requestKey:v.requestKey,requestHash:fingerprint,items:json([{type:'custom',name:v.description,quantity:v.quantity}]),history:{create:{status:'new',actorId:actor.id,note:'Recorded by staff · '+v.source}}}});
+  await record(tx,actor,'manual-enquiry-created','quotes',quote.id,{reference:quote.reference,source:v.source});return result(quote);
+ });}catch(error){if(error instanceof Prisma.PrismaClientKnownRequestError&&error.code==='P2002'){const prior=await replay();if(prior)return prior;}throw error;}
+}
 function enquiryResult(quote:{id:string;reference:string;name:string;notes:string;items:Prisma.JsonValue}){
  const items=z.array(itemSnapshot).parse(quote.items);
- const text=`Enquiry reference: ${quote.reference}\n\n`+whatsappEnquiryText(items.filter(i=>i.type!=='design') as Parameters<typeof whatsappEnquiryText>[0],quote.name,quote.notes)+(items.some(i=>i.type==='design')?'\nDesign Studio layout attached to this enquiry.':'');
+ const text=`Enquiry reference: ${quote.reference}\n\n`+whatsappEnquiryText(items.filter(i=>i.type==='product'||i.type==='inspiration') as Parameters<typeof whatsappEnquiryText>[0],quote.name,quote.notes)+(items.some(i=>i.type==='design')?'\nDesign Studio layout attached to this enquiry.':'');
  return {id:quote.id,reference:quote.reference,whatsappUrl:`https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(text)}`,message:'Your enquiry is saved. Review and send the message in WhatsApp.'};
 }
 
@@ -78,7 +91,7 @@ export async function updateEnquiry(input:unknown){
   await record(tx,actor,'enquiry-updated','quotes',v.id,{from:current.status,to:v.status,reason:v.reason,assignedTo,previousAssignedTo:current.assignedTo});return {message:'Enquiry updated.'};
  });
 }
-const conversionInput=z.object({id,amount:amountSchema,currency:currencySchema.default('GHS'),address:z.string().trim().min(3).max(2000),expectedDelivery:z.iso.date().optional(),instructions:z.string().max(4000).default(''),assignedTo:z.string().optional(),customerId:z.string().optional(),confirmCustomer:z.literal(true),confirmAgreement:z.boolean().default(false),reason:optionalNote});
+const conversionInput=z.object({id,email:z.email().max(254).transform(value=>value.toLowerCase()).optional(),amount:amountSchema,currency:currencySchema.default('GHS'),address:z.string().trim().min(3).max(2000),expectedDelivery:z.iso.date().optional(),instructions:z.string().max(4000).default(''),assignedTo:z.string().optional(),customerId:z.string().optional(),confirmCustomer:z.literal(true),confirmAgreement:z.boolean().default(false),reason:optionalNote});
 export async function convertEnquiry(input:unknown){
  const actor=await staff('orders');await staff('quotes');const v=conversionInput.parse(input);
  return db.$transaction(async tx=>{
@@ -92,19 +105,24 @@ export async function convertEnquiry(input:unknown){
   // Legacy scene-only requests remain convertible without fabricated catalogue lines.
   if(!items.length&&quote.scene)items.push({type:'design',name:'Design Studio project',quantity:1});
   if(!items.length)throw new HttpError(400,'Confirm the requested items before creating an order.');
-  const email=quote.email.toLowerCase();
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer:${email}`},0))`;
-  const customer=v.customerId?await tx.customer.findUniqueOrThrow({where:{id:v.customerId}}):await tx.customer.upsert({where:{email},create:{name:quote.name,email,phone:quote.phone,verifiedBy:actor.id},update:{}});
-  if(v.customerId&&customer.email!==email&&quote.customerId!==customer.id)throw new HttpError(400,'Review and match the customer identity before converting.');
+  if(quote.email&&v.email&&v.email!==quote.email.toLowerCase())throw new HttpError(400,'The recorded email must be reviewed through customer management.');
+  const email=v.email||quote.email.toLowerCase();
+  if(!email&&!quote.phone)throw new HttpError(400,'Record a customer email or WhatsApp number before confirming.');
+  let customer=null;
+  if(email){
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer:${email}`},0))`;
+   customer=v.customerId?await tx.customer.findUniqueOrThrow({where:{id:v.customerId}}):await tx.customer.upsert({where:{email},create:{name:quote.name,email,phone:quote.phone,verifiedBy:actor.id},update:{}});
+   if(v.customerId&&customer.email!==email&&quote.customerId!==customer.id)throw new HttpError(400,'Review and match the customer identity before converting.');
+  }else if(v.customerId)throw new HttpError(400,'Provide the reviewed customer email to link an existing customer.');
   const currentAssignee=quote.assignedTo?await tx.user.findUnique({where:{id:quote.assignedTo},select:{role:true}}):null;
   const assignedTo=await assignee(tx,v.assignedTo??(currentAssignee&&allowed(currentAssignee.role,'orders')?quote.assignedTo!:(manager(actor)?undefined:actor.id)),'orders'),credentials=trackingCredentials();
-  const created=await tx.order.create({data:{sourceQuoteId:quote.id,customerId:customer.id,userId:quote.userId,name:quote.name,email:quote.email,phone:quote.phone||customer.phone,address:{deliveryAddress:v.address},assignedTo,expectedDelivery:v.expectedDelivery?new Date(v.expectedDelivery+'T12:00:00Z'):null,notes:v.instructions,quoteSnapshot:json({reference:quote.reference,items:quote.items,scene:quote.scene,notes:quote.notes}),accessHash:hash(randomUUID()),trackingHash:credentials.trackingHash,trackingCipher:credentials.trackingCipher,status:'confirmed',currency:v.currency,subtotal:v.amount,total:v.amount,tax:0,shipping:0,items:{create:items.map(item=>({variantId:item.variantId||null,kind:item.type,name:item.name,sku:item.sku||'',quantity:item.quantity,price:null,snapshot:json(item)}))}}});
+  const created=await tx.order.create({data:{sourceQuoteId:quote.id,customerId:customer?.id,userId:quote.userId,name:quote.name,email,phone:quote.phone||customer?.phone,address:{deliveryAddress:v.address},assignedTo,expectedDelivery:v.expectedDelivery?new Date(v.expectedDelivery+'T12:00:00Z'):null,notes:v.instructions,quoteSnapshot:json({reference:quote.reference,items:quote.items,scene:quote.scene,notes:quote.notes}),accessHash:hash(randomUUID()),trackingHash:credentials.trackingHash,trackingCipher:credentials.trackingCipher,status:'confirmed',currency:v.currency,subtotal:v.amount,total:v.amount,tax:0,shipping:0,items:{create:items.map(item=>({variantId:item.variantId||null,kind:item.type,name:item.name,sku:item.sku||'',quantity:item.quantity,price:null,snapshot:json(item)}))}}});
   const event=await tx.orderEvent.create({data:{orderId:created.id,status:'confirmed',note:v.reason||'Customer agreement reviewed and order confirmed.',actorId:actor.id,publicNote:null}});
-  await tx.quote.update({where:{id:quote.id},data:{status:'converted',customerId:customer.id,version:{increment:1}}});
+  await tx.quote.update({where:{id:quote.id},data:{status:'converted',email,customerId:customer?.id,version:{increment:1}}});
   await tx.enquiryEvent.create({data:{quoteId:quote.id,previousStatus:quote.status,status:'converted',note:v.reason||'Customer agreement confirmed and converted to an order.',actorId:actor.id}});
   await queueOrderEmail(tx,created,event.id);
-  await record(tx,actor,'enquiry-to-order','orders',created.id,{quoteId:quote.id,customerId:customer.id,amount:v.amount,currency:v.currency,payment:'unpaid',reason:v.reason});
-  return {record:{id:created.id,reference:created.reference,status:created.status},trackingUrl:trackingUrl(created.trackingCipher!),message:smtpConfigured()?'Order confirmed. Tracking is ready and the confirmation email is queued. No payment has been recorded.':'Order confirmed. Tracking is ready. Email delivery is on hold; the confirmation stays queued. No payment has been recorded.'};
+  await record(tx,actor,'enquiry-to-order','orders',created.id,{quoteId:quote.id,customerId:customer?.id||null,amount:v.amount,currency:v.currency,payment:'unpaid',reason:v.reason});
+  return {record:{id:created.id,reference:created.reference,status:created.status},trackingUrl:trackingUrl(created.trackingCipher!),message:!email?'Order confirmed. Share the private tracking link with this customer in WhatsApp. No email was queued and no payment has been recorded.':smtpConfigured()?'Order confirmed. Tracking is ready and the confirmation email is queued. No payment has been recorded.':'Order confirmed. Tracking is ready. Email delivery is on hold; the confirmation stays queued. No payment has been recorded.'};
  });
 }
 
@@ -122,7 +140,7 @@ export async function updateOrder(input:unknown){
   if(changed&&v.status==='cancelled'){for(const reservation of await tx.reservation.findMany({where:{orderId:current.id,released:false}})){const released=await tx.reservation.updateMany({where:{id:reservation.id,released:false},data:{released:true}});if(released.count){await tx.variant.update({where:{id:reservation.variantId},data:{stock:{increment:reservation.quantity}}});await tx.stockMovement.create({data:{variantId:reservation.variantId,quantity:reservation.quantity,reason:'Cancelled order reservation release',actorId:actor.id}});}}}
   if(changed){const event=await tx.orderEvent.create({data:{orderId:current.id,status:v.status,previousStatus:current.status,actorId:actor.id,note:v.reason||('Order moved from '+label(previous)+' to '+label(v.status)+'.'),publicNote:v.publicNote||null}});await queueOrderEmail(tx,order,event.id,v.publicNote);}
   await record(tx,actor,changed?'order-status':'order-details','orders',current.id,{from:current.status,to:order.status,reason:v.reason||(assignedTo!==current.assignedTo?'Assignment updated.':'Order details updated.'),assignedTo,previousAssignedTo:current.assignedTo,paymentGate:'staff_decision'});
-  return {message:changed?(smtpConfigured()?'Status updated. Tracking is current and the customer email is queued when an active link is available.':'Status updated. Tracking is current. Email delivery is on hold.'):'Details saved. No status email was created.'};
+  return {message:changed?(!order.email?'Status updated. The customer’s tracking page is current. No email address is recorded.':smtpConfigured()?'Status updated. Tracking is current and the customer email is queued when an active link is available.':'Status updated. Tracking is current. Email delivery is on hold.'):'Details saved. No status email was created.'};
  });
 }
 
@@ -163,7 +181,7 @@ export async function trackingCommand(input:unknown){
   const credentials=v.action==='regenerate'?trackingCredentials():null;
   const order=await tx.order.update({where:{id:v.id},data:{version:{increment:1},...(credentials?{trackingHash:credentials.trackingHash,trackingCipher:credentials.trackingCipher,trackingRevokedAt:null,trackingExpiresAt:['completed','cancelled'].includes(current.status)?new Date(Date.now()+90*86400000):null}:{trackingRevokedAt:new Date()})}});
   if(credentials)await queueOrderEmail(tx,order,'tracking-'+randomUUID());
-  await record(tx,actor,'tracking-'+v.action,'orders',v.id,{reason:v.reason});return {message:credentials?'New private tracking link created and email queued.':'Tracking link revoked.',...(credentials?{url:trackingUrl(order.trackingCipher!)}:{})};
+  await record(tx,actor,'tracking-'+v.action,'orders',v.id,{reason:v.reason});return {message:credentials?(order.email?'New private tracking link created and email queued.':'New private tracking link created. Share it directly with the customer.'):'Tracking link revoked.',...(credentials?{url:trackingUrl(order.trackingCipher!)}:{})};
  });
 }
 export async function lookupTracking(input:unknown){
@@ -193,13 +211,13 @@ export async function showroomRead(resource:string,query:URLSearchParams){
  const staffList=()=>db.user.findMany({where:{suspended:false,role:{in:['owner','admin','sales','support','fulfillment']}},select:{id:true,name:true,role:true}});
  if(resource==='enquiries'){
   const enquiryFilter:Prisma.QuoteWhereInput=status==='converted'?{order:{isNot:null}}:status?{status:{in:({contacted:['contacted','reviewing'],awaiting_customer:['awaiting_customer','quoted'],agreed:['agreed','accepted']} as Record<string,string[]>)[status]||[status]},order:{is:null}}:{};
-  const where:Prisma.QuoteWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...enquiryFilter,OR:[{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
+  const where:Prisma.QuoteWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...enquiryFilter,OR:[{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{phone:{contains:q}}]};
   const [rows,total,staffMembers]=await Promise.all([db.quote.findMany({where,...paging,orderBy,include:{order:{select:{id:true,reference:true}},customer:true,history:{orderBy:{createdAt:'asc'}}}}),db.quote.count({where}),staffList()]);
   const candidates=await db.customer.findMany({where:{email:{in:rows.filter(row=>!row.customerId).map(row=>row.email.toLowerCase())}},select:{id:true,name:true,email:true}});
   return {currentStaffId:actor.id,canAssign:manager(actor),rows:rows.map(row=>({...row,status:row.order?'converted':canonicalEnquiryStatus(row.status)})),total,staff:staffMembers,candidates,canConvert:allowed(actor.role,'orders')};
  }
  if(resource==='orders'){
-  const where:Prisma.OrderWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...(status?{status:{in:({confirmed:['confirmed','awaiting_confirmation','paid'],dispatched:['dispatched','shipped']} as Record<string,string[]>)[status]||[status]}}:{}),OR:[{id:{contains:q}},{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}}]};
+  const where:Prisma.OrderWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...(status?{status:{in:({confirmed:['confirmed','awaiting_confirmation','paid'],dispatched:['dispatched','shipped']} as Record<string,string[]>)[status]||[status]}}:{}),OR:[{id:{contains:q}},{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{phone:{contains:q}}]};
   const finance=['owner','admin','sales'].includes(actor.role);
   const [orders,total,staffMembers]=await Promise.all([db.order.findMany({where,...paging,orderBy,include:{customer:{select:{phone:true}},items:true,payments:true,events:{orderBy:{createdAt:'asc'}},sourceQuote:{select:{reference:true,id:true}}}}),db.order.count({where}),staffList()]);
   const details=await db.auditLog.findMany({where:{entity:'orders',entityId:{in:orders.map(order=>order.id)},action:'order-details'},orderBy:{createdAt:'asc'},select:{id:true,entityId:true,actorId:true,createdAt:true,summary:true}});

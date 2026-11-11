@@ -4,7 +4,7 @@ import {db} from '../src/lib/db';
 import {allowed,defaultScene} from '../src/lib/domain';
 const actor=vi.hoisted(()=>({id:'showroom-test-owner',role:'owner'}));
 vi.mock('../src/lib/security',async original=>{const originalModule=await original<typeof import('../src/lib/security')>();return {...originalModule,user:vi.fn(async()=>null),staff:vi.fn(async(resource:string)=>{if(!allowed(actor.role,resource))throw new originalModule.HttpError(403,'Denied');return actor;})};});
-const {createEnquiry,updateEnquiry,convertEnquiry,updateOrder,recordReceipt,shareTracking,lookupTracking,trackingCommand,recoverTracking,showroomRead,customerCommand}=await import('../src/lib/showroom');
+const {createManualEnquiry,createEnquiry,updateEnquiry,convertEnquiry,updateOrder,recordReceipt,shareTracking,lookupTracking,trackingCommand,recoverTracking,showroomRead,customerCommand}=await import('../src/lib/showroom');
 const {decryptTracking}=await import('../src/lib/order-tracking');
 const enabled=process.env.RUN_DATABASE_TESTS==='true';
 if(enabled&&new URL(process.env.DATABASE_URL!).pathname!=='/sterlyn_test')throw new Error('Isolated sterlyn_test database required');
@@ -16,6 +16,26 @@ describe.skipIf(!enabled)('showroom PostgreSQL workflow',()=>{
   const email=randomUUID()+'@showroom.invalid';emails.push(email);const product=await db.product.findFirstOrThrow({where:{status:'published'}});
   const input={requestKey:randomUUID(),name:'Guest customer',email,items:[{type:'product',slug:product.slug,name:'FORGED NAME',quantity:2,finish:'Requested finish'},{type:'inspiration',slug:'the-emerald-room',quantity:1}],scene:defaultScene,notes:'Test project requirements'};
   const [a,b]=await Promise.all([createEnquiry(input),createEnquiry(input)]);quotes.push(a.id);expect(a.id).toBe(b.id);expect(a.reference).toMatch(/^SQ-\d{6,}$/);expect(a.whatsappUrl).toContain('447576899618');expect(decodeURIComponent(a.whatsappUrl)).toContain(a.reference);expect(decodeURIComponent(a.whatsappUrl)).toContain(product.name);expect(decodeURIComponent(a.whatsappUrl)).not.toContain('FORGED NAME');expect(await db.quote.count({where:{requestKey:input.requestKey}})).toBe(1);expect((await db.quote.findUniqueOrThrow({where:{id:a.id}})).customerId).toBeNull();await expect(createEnquiry({...input,notes:'Changed request'})).rejects.toMatchObject({status:409});
+ });
+ it('records private WhatsApp requests once and tracks phone-only orders without inventing emails',async()=>{
+  actor.role='owner';const input={requestKey:randomUUID(),name:'Private WhatsApp customer',phone:'+233200000001',description:'Bespoke walnut kitchen',quantity:2,source:'Direct WhatsApp'};
+  const [a,b]=await Promise.all([createManualEnquiry(input),createManualEnquiry(input)]);quotes.push(a.enquiry.id);expect(a.enquiry.id).toBe(b.enquiry.id);
+  await expect(createManualEnquiry({...input,description:'Different request'})).rejects.toMatchObject({status:409});
+  const quote=await db.quote.findUniqueOrThrow({where:{id:a.enquiry.id},include:{history:true}});expect(quote.email).toBe('');expect(quote.assignedTo).toBe(actor.id);expect(quote.history[0].note).toContain('Direct WhatsApp');
+  const result=await convertEnquiry({id:quote.id,amount:10000,address:'Agreed delivery address',confirmAgreement:true,confirmCustomer:true});
+  const order=await db.order.findUniqueOrThrow({where:{id:result.record.id},include:{items:true}});expect(order.email).toBe('');expect(order.customerId).toBeNull();expect(order.items[0]).toMatchObject({kind:'custom',name:input.description,quantity:2,price:null});expect(result.message).toContain('No email was queued');
+  expect(await db.notification.count({where:{dedupeKey:{startsWith:'order:'+order.id+':'}}})).toBe(0);
+  const token=decryptTracking(order.trackingCipher!);expect((await lookupTracking({token})).status).toBe('confirmed');
+  await updateOrder({id:order.id,version:order.version,status:'processing'});expect((await lookupTracking({token})).status).toBe('processing');
+  expect(await db.notification.count({where:{recipient:''}})).toBe(0);
+  await expect(createManualEnquiry({...input,requestKey:randomUUID(),phone:'0200000000'})).rejects.toThrow();
+  actor.role='fulfillment';await expect(createManualEnquiry({...input,requestKey:randomUUID()})).rejects.toMatchObject({status:403});actor.role='owner';
+ });
+ it('can record a reviewed email when confirming a phone-only request',async()=>{
+  const email=randomUUID()+'@showroom.invalid';emails.push(email);
+  const saved=await createManualEnquiry({requestKey:randomUUID(),name:'WhatsApp email supplied later',phone:'+233200000002',description:'Custom pantry'});quotes.push(saved.enquiry.id);
+  const result=await convertEnquiry({id:saved.enquiry.id,email,amount:10000,address:'Reviewed address',confirmAgreement:true,confirmCustomer:true});
+  expect(await db.order.findUniqueOrThrow({where:{id:result.record.id}})).toMatchObject({email});expect(await db.notification.count({where:{recipient:email}})).toBe(1);
  });
  it('rejects missing customer data and unavailable items',async()=>{await expect(createEnquiry({requestKey:randomUUID(),name:'',email:'',items:[]})).rejects.toThrow();await expect(createEnquiry({requestKey:randomUUID(),name:'Guest',email:'guest@example.test',items:[{type:'product',slug:'not-a-real-product',quantity:1}]})).rejects.toMatchObject({status:422});});
  it('converts once, preserves snapshots, queues one email and supports safe lifecycle/receipts/tracking',async()=>{

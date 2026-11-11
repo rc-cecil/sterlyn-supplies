@@ -6,7 +6,7 @@ import {sceneSchema,type Scene} from '@/lib/domain';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, ClipboardList, Mail, MessageCircle, Phone, Trash2 } from 'lucide-react';
 import {
-  addEnquiryItem, BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP, ENQUIRY_EVENT,
+  addEnquiryItem, BUSINESS_FACEBOOK, BUSINESS_PHONE, BUSINESS_WHATSAPP, GENERAL_WHATSAPP_URL, ENQUIRY_EVENT,
   enquiryItemUrl, enquiryKey, enquiryUrl, readDirectEnquiry, readEnquiryBag,
   whatsappEnquiryText, writeEnquiryBag, type EnquiryItem,
 } from '@/lib/enquiry';
@@ -208,11 +208,11 @@ export function ContactPage({preview=false}:{preview?:boolean}) {
       </div>
       <aside className="enquiry-contact-methods">
         <h2>Reach us directly.</h2>
-        <a href={'https://wa.me/' + BUSINESS_WHATSAPP} target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={21} /><span><strong>WhatsApp · Preferred</strong><small>{BUSINESS_PHONE}</small></span><ArrowUpRight size={17} />
+        <a href={GENERAL_WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={21} /><span><strong>WhatsApp · Preferred</strong><small>Chat with our team</small></span><ArrowUpRight size={17} />
         </a>
         <div className="enquiry-method-unavailable"><Mail size={21} /><span><strong>Business email</strong><small>Coming after domain setup</small></span></div>
-        <a href={'tel:' + BUSINESS_PHONE}><Phone size={21} /><span><strong>Call us</strong><small>{BUSINESS_PHONE}</small></span><ArrowUpRight size={17} /></a>
+        <a href={'tel:' + BUSINESS_PHONE}><Phone size={21} /><span><strong>Call us</strong><small>Speak with our team</small></span><ArrowUpRight size={17} /></a>
         <a href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer"><span aria-hidden="true">f</span><span><strong>Facebook</strong><small>Sterlyn Supplies</small></span><ArrowUpRight size={17} /></a>
       </aside>
     </div>

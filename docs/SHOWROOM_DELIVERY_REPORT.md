@@ -1,6 +1,6 @@
 # Showroom operations delivery report
 
-Latest: the owner/staff workflow was shortened on 3 November 2026 and email setup is on hold. See [the current staff guide](STAFF_GUIDE.md) and the final follow-up section below.
+Latest: direct WhatsApp enquiries and phone-only order tracking were added on 11 November 2026. The pictured sink was archived in Neon. Email setup remains on hold. See [the current staff guide](STAFF_GUIDE.md) and the final follow-up section below.
 
 Original upgrade: 1 November 2026, draft PR #3. At the owner's request on 2 November, the completed feature branch was fast-forwarded into **local `main`** and the local feature branch deleted. No GitHub merge, push or production deployment was performed for this follow-up.
 
@@ -240,3 +240,20 @@ Remaining service configuration: actual customer email delivery (including verif
 ### Netlify build limit after the curation push
 
 Commit `fc6102b` reached GitHub, but Netlify skipped deploy `6af4f289f105adf8f8f53ea9` with **“Skipped due to account credit usage exceeded.”** No billing change or attempt to bypass the account limit was made. The existing published application remains live: a follow-up check returned HTTP 200/database connected and HTTP 200 for `/collections/sinks`, four cards, neither retired tap link. Thus the requested live database curation is visible; publishing the updated catalogue source and test additions requires restoring the Netlify allowance and retrying the build. This source release must not be described as newly deployed.
+
+
+## Direct WhatsApp requests — 11 November 2026
+
+The Enquiries workspace now has **Add WhatsApp enquiry** for sales/support/owner staff with enquiry permission. A short form records name, international phone number, request description and quantity; email and additional requirements are optional. Source choices are Direct WhatsApp, Website WhatsApp, Phone and Other. The existing Quote, EnquiryEvent, request-key uniqueness and audit log provide persistence and provenance. New requests are assigned to the recording staff member and open after saving. Retries reuse one enquiry; conflicting content is rejected.
+
+The existing order-conversion transaction supports these custom snapshots without fabricated SKUs or unit prices. Phone-only orders retain their original enquiry, create normal secure tracking credentials and do not create a placeholder Customer or email address. Email is stored as an empty value in the existing non-null Quote/Order column when absent; no migration is required. A reviewed email can be provided during confirmation. Missing-email orders never queue notifications. Their tracking remains current through normal fulfilment actions, and staff can copy or draft a WhatsApp message containing the private link. Sharing opens a draft; no automatic sending or payment confirmation occurs.
+
+General public WhatsApp links now draft “Hi Sterlyn, I’m enquiring from your website.” The number is not printed in the footer or Contact channel labels. The destination remains in the WhatsApp/tel link itself. Website clicks alone do not create a named enquiry or prove a message was sent. Staff must record direct conversations; automatic incoming-message capture remains outside the first-stage integration.
+
+The exact standalone sink `pa-sink-304-620` with its supplier cut-out photograph was archived in Neon on the owner's request. Its product/variant/history records and original image remain. The fallback/seed manifest excludes it. The public catalogue has 19 products, including three Sinks & taps items. Live collection HTML was verified not to include the retired slug; live database health returned connected.
+
+Modified areas: `src/lib/showroom.ts`, `showroom-domain.ts`, `order-email.ts`, `enquiry.ts`, `catalogue-curation.ts`, `supplier-catalogue.ts`; the existing API dispatcher, `Shell`, `ShowcaseEnquiry`, `admin/BusinessOperations`, new `admin/ManualEnquiry`; related catalogue/workflow tests and this staff documentation. No dependency or database schema changes.
+
+Deployment: Netlify's latest production build was skipped with **account credit usage exceeded**. Catalogue archival is already live because it changes existing data. The new form, short drafts and sharing interface need a successful deployment after the account allowance is restored. Email remains on hold; no external message or email was sent during testing.
+
+Verification for this follow-up: TypeScript, repository ESLint, the production build and all 73 unit/PostgreSQL tests passed. Four relevant browser scenarios passed across the final runs: collection counts, responsive/accessibility collection and journal checks at three widths, the existing guest enquiry/owner/staff/delivery workflow, and the new phone-only WhatsApp enquiry/confirmation/sharing/tracking workflow. The first manual browser run timed out because its exact phone-label selector omitted visible help text; the selector was corrected and the complete scenario then passed. No application validation was relaxed. Synthetic browser fixtures were removed from `sterlyn_test`; no test customer/order was created in Neon. Screenshots are in ignored `out/whatsapp-workflow/` (new form desktop/mobile, confirmed order sharing, customer tracking).
