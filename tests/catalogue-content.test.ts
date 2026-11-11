@@ -12,7 +12,8 @@ function imageFor(product:(typeof catalogueProducts)[number]) {
 describe('product collections and editorial separation',()=>{
  it('gives each category at least three products, distinct names and multiple real images',()=>{
   expect(catalogueCategories.map(([slug])=>slug)).toEqual(['kitchens','cabinetry','islands','worktops','sinks']);
-  expect(catalogueProducts).toHaveLength(22);
+  expect(catalogueProducts).toHaveLength(20);
+  expect(catalogueProducts.some(p=>p.slug.startsWith('pa-tap-'))).toBe(false);
   for(const [category] of catalogueCategories){
     const rows=catalogueProducts.filter(p=>p.category===category);
     expect(rows.length).toBeGreaterThanOrEqual(3);
@@ -40,9 +41,9 @@ describe('product collections and editorial separation',()=>{
   expect(inspirationStories.length).toBeGreaterThanOrEqual(6);
  });
  it('supplies genuine source references and labels product versus packaging dimensions',()=>{
-  expect(supplierCatalogueProducts).toHaveLength(4);
-  expect(supplierCatalogueProducts.map(p=>p.category)).toEqual(['kitchens','sinks','sinks','sinks']);
-  expect(new Set(supplierCatalogueProducts.map(p=>p.referenceCode)).size).toBe(4);
+  expect(supplierCatalogueProducts).toHaveLength(2);
+  expect(supplierCatalogueProducts.map(p=>p.category)).toEqual(['kitchens','sinks']);
+  expect(new Set(supplierCatalogueProducts.map(p=>p.referenceCode)).size).toBe(2);
   for(const p of supplierCatalogueProducts){
     expect(p.referenceCode.trim().length).toBeGreaterThan(0);
     expect(p.sourcePdfPage).toBeGreaterThan(0);

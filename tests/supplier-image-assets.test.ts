@@ -13,8 +13,8 @@ describe('refined supplier photograph integrity',()=>{
      ...supplierCatalogueProducts.map(p=>p.sourcePhoto).filter((p):p is string=>typeof p==='string'),
      ...supplierInspirationStories.map(s=>s.sourcePhoto).filter((p):p is string=>typeof p==='string')
    ];
-   expect(photos).toHaveLength(4);
-   expect(new Set(photos).size).toBe(4);
+   expect(photos).toHaveLength(2);
+   expect(new Set(photos).size).toBe(2);
    for(const path of photos){
      expect(path.startsWith('/images/supplier/')).toBe(true);
      expect(existsSync('public'+path)).toBe(true);
