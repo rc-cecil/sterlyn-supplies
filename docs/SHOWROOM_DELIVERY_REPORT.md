@@ -196,3 +196,20 @@ Release is **not yet published**: the current Netlify production setting still e
 Email setup remains deferred by the business. SMTP delivery, customer verification/reset emails, and automatic order emails will not reach inboxes until configured. WhatsApp handoff and manual sharing of secure tracking links are the communication paths available without email. Arbitrary media uploads also require hosted object storage, antivirus and the isolated processor; the code retains those safeguards. A database-only deployment must not be described as supporting that pipeline.
 
 Both production-build browser checks passed: interactive responsive dashboard and the guest enquiry → reviewed order → owner-issued staff login → assigned fulfilment → private customer tracking workflow (2 passed). These used the isolated local test database, not Neon or the live Netlify site.
+
+## Published Netlify release — 11 November 2026
+
+Release commit `24d1358` was pushed to `main` and published successfully as Netlify deploy `6af4e9dac6ba669fd25f6718` at **https://sterlynsupplies.netlify.app**. The earlier preparation-only status above is superseded by this release entry.
+
+- Neon SSL connection verified: migration history already current, 22 published catalogue products, five categories. No migration, reset or catalogue overwrite was needed.
+- Updated production-only database URLs, application URL and a new tracking-encryption key in Netlify. Preserved the existing authentication secret. Production preview mode is off; dev/branch/PR contexts remain read-only. Public indexing is still disabled (verified in robots.txt).
+- Live `/api/health`: HTTP 200 with database connected. Home, collections, inspiration, Design Studio, Contact, staff login and owner setup returned HTTP 200. Browser navigation to `/admin` correctly led to `/staff`; anonymous admin API access returned 401.
+- A uniquely marked disposable guest enquiry was saved through the deployed API into Neon with the canonical selected product and quantity. Retrying returned the same ID/reference, with exactly one database record. Its WhatsApp continuation contained the saved reference and correct business number. No WhatsApp message or real email was sent. The disposable test event/enquiry was removed afterward; append-only audit records and reference sequence progress were retained. No real commercial records were removed.
+- Netlify deployed the Next.js server plus `notifications` and `publications`, each with a per-minute schedule. Direct HTTP calls to those scheduled functions returned 403. The notification scheduler recorded a fresh cloud heartbeat in Neon without SMTP configured.
+- Local verification remains 71 unit/PostgreSQL tests, two browser workflows, TypeScript, ESLint, production build and dependency audit passing. Those complete staff/order/tracking workflows used the isolated test database, not fabricated production orders.
+
+### Required owner handoff and integration limits
+
+There was no owner account in Neon at release. Prepared a new 24-hour single-use invitation using the existing approved owner email. The link and login instructions are in private, ignored `.local/production-owner-setup.txt`, with mode 0600; no token, password or connection string was committed. The owner must open that link, choose a password of 16+ characters, then sign in at `/staff`. Actual owner password login remains awaiting that human step. MFA is optional.
+
+SMTP is still deferred: customer verification/reset and order emails remain queued, not delivered. WhatsApp handoff and manual secure tracking-link sharing work independently. Object storage and the hosted antivirus/isolated processor are still required for arbitrary media uploads; existing bundled product imagery and catalogue editing remain usable. Consequently, this is a published database-backed core showroom/operations release, not a claim that email and the media-processing pipeline are configured.
