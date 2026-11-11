@@ -21,7 +21,9 @@
     "media:studio": "remotion studio media/index.ts --no-open",
     "media:render": "remotion render media/index.ts SterlynLogo public/video/sterlyn-logo-v3.mp4",
     "walkthrough:serve": "node scripts/serve-walkthrough.mjs",
-    "email:verify": "tsx scripts/verify-email.ts"
+    "email:verify": "tsx scripts/verify-email.ts",
+    "db:production:check": "tsx scripts/production-db.ts",
+    "db:production:migrate": "tsx scripts/production-db.ts --migrate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.900.0",

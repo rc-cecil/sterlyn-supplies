@@ -6,6 +6,8 @@ Collections contain six product families with three illustrative product preview
 
 The persistent enquiry, external receipt, order-status email and guest tracking workflow is documented in [showroom operations](docs/SHOWROOM_OPERATIONS.md). Configure the shared tracking encryption key and run the notification worker for the complete experience.
 
+For the database-backed Netlify site, follow [Netlify + Neon deployment](docs/NETLIFY_DEPLOYMENT.md). The optional read-only preview does not provide live enquiries or administration. Additional Netlify scheduled functions process the existing notification queue and catalogue publications without a local worker; media uploads still need the hosted storage/scanning/processing services.
+
 ## Local development
 
 Use Node 24 and pnpm. Run `pnpm install`, copy `.env.example` to `.env`, set a unique authentication secret, and configure PostgreSQL. Then:

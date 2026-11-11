@@ -14,7 +14,7 @@ export async function bootstrapOwner(input:unknown){
     if(await tx.user.findUnique({where:{email}}))throw new Error('This account already exists. Bootstrap does not overwrite accounts.');
     const id=randomUUID();
     await tx.user.create({data:{id,name:'Sterlyn owner',email,emailVerified:true,role:'owner',accounts:{create:{id:randomUUID(),accountId:id,providerId:'credential',password:digest}}}});
-    await tx.auditLog.create({data:{actorId:id,role:'owner',action:'owner-bootstrap',entity:'teams',entityId:id,summary:{result:'success',mfaRequired:true},correlationId:requestCorrelationId()}});
+    await tx.auditLog.create({data:{actorId:id,role:'owner',action:'owner-bootstrap',entity:'teams',entityId:id,summary:{result:'success',mfaRequired:false},correlationId:requestCorrelationId()}});
     return {id};
   },{timeout:30000,maxWait:30000});
 }

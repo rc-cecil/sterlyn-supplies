@@ -8,17 +8,17 @@ export function deliveryFailure(error:unknown,attempt:number){
  return {status:definitive?(permanent||attempt>=5?'failed':'queued'):'delivery_unknown',error:definitive?'SMTP rejected delivery. Check configuration or recipient before retrying.':'Delivery outcome unknown. Verify with the mail provider before retrying.',nextAttemptAt:new Date(Date.now()+Math.min(3600000,60000*2**(attempt-1)))};
 }
 export function smtpConfigured(){return !!(process.env.SMTP_HOST&&process.env.MAIL_FROM&&(!process.env.SMTP_USER||process.env.SMTP_PASSWORD));}
-export function createMailTransport(){
- return nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_PORT==='465',connectionTimeout:15000,greetingTimeout:15000,socketTimeout:60000,requireTLS:process.env.NODE_ENV==='production'&&!(['mail','localhost','127.0.0.1'].includes(process.env.SMTP_HOST||'')&&process.env.SMTP_ALLOW_INSECURE_LOCAL==='true'),auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD}:undefined});
+export function createMailTransport(timeoutMs=60000){
+ return nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:process.env.SMTP_PORT==='465',connectionTimeout:Math.min(15000,timeoutMs),greetingTimeout:Math.min(15000,timeoutMs),socketTimeout:timeoutMs,requireTLS:process.env.NODE_ENV==='production'&&!(['mail','localhost','127.0.0.1'].includes(process.env.SMTP_HOST||'')&&process.env.SMTP_ALLOW_INSECURE_LOCAL==='true'),auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD}:undefined});
 }
-export async function deliverNotifications(notificationIds?:string[]){
+export async function deliverNotifications(notificationIds?:string[],options:{batchSize?:number;timeoutMs?:number}={}){
  const scope=notificationIds?{id:{in:notificationIds}}:{};
  const now=new Date();
  await db.notification.updateMany({where:{...scope,status:'sending',OR:[{leaseUntil:{lt:now}},{leaseUntil:null,updatedAt:{lt:new Date(Date.now()-15*60000)}}]},data:{status:'delivery_unknown',leaseToken:null,leaseUntil:null,error:'Worker interrupted during delivery. Verify with the provider before retrying.'}});
  if(!smtpConfigured())return;
- const mailer=createMailTransport();
+ const mailer=createMailTransport(options.timeoutMs);
  try{
-  for(const mail of await db.notification.findMany({where:{...scope,status:'queued',nextAttemptAt:{lte:now},attempts:{lt:5}},take:10,orderBy:{createdAt:'asc'}})){
+  for(const mail of await db.notification.findMany({where:{...scope,status:'queued',nextAttemptAt:{lte:now},attempts:{lt:5}},take:Math.max(1,Math.min(10,options.batchSize||10)),orderBy:{createdAt:'asc'}})){
    const leaseToken=randomUUID();
    const claim=await db.notification.updateMany({where:{id:mail.id,status:'queued',attempts:mail.attempts},data:{status:'sending',attempts:{increment:1},leaseToken,leaseUntil:new Date(Date.now()+5*60000)}});
    if(!claim.count)continue;

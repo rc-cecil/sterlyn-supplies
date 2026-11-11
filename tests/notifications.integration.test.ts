@@ -23,6 +23,14 @@ describe.skipIf(!enabled)('notification processing leases and outcomes',()=>{
   const message=await fixture();await deliverNotifications([message.id]);
   expect(mailer.sendMail).not.toHaveBeenCalled();expect(await db.notification.findUniqueOrThrow({where:{id:message.id}})).toMatchObject({status:'queued',attempts:0});
  });
+ it('bounds scheduled delivery to one claim while preserving the remaining queue',async()=>{
+  configure();const messages=await Promise.all([fixture(),fixture(),fixture()]);
+  mailer.sendMail.mockResolvedValue({accepted:['notifications-suite@integration.invalid']});
+  await deliverNotifications(messages.map(message=>message.id),{batchSize:1,timeoutMs:5000});
+  expect(mailer.sendMail).toHaveBeenCalledTimes(1);
+  expect(await db.notification.count({where:{id:{in:messages.map(message=>message.id)},status:'smtp_accepted'}})).toBe(1);
+  expect(await db.notification.count({where:{id:{in:messages.map(message=>message.id)},status:'queued',attempts:0}})).toBe(2);
+ });
  it('leaves unconfigured mail queued and marks expired sending leases uncertain without resending',async()=>{
   vi.stubEnv('SMTP_HOST','');const pending=await fixture();await deliverNotifications([pending.id]);expect(await db.notification.findUniqueOrThrow({where:{id:pending.id}})).toMatchObject({status:'queued',attempts:0});await db.notification.update({where:{id:pending.id},data:{status:'sending',leaseToken:'expired-worker',leaseUntil:new Date(Date.now()-1000)}});configure();await deliverNotifications([pending.id]);expect(mailer.sendMail).not.toHaveBeenCalled();expect(await db.notification.findUniqueOrThrow({where:{id:pending.id}})).toMatchObject({status:'delivery_unknown'});
  });

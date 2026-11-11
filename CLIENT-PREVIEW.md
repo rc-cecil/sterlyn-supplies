@@ -13,9 +13,11 @@ The Netlify production environment can use `STERLYN_CLIENT_PREVIEW=true` to show
 2. Carefully migrate and verify real data from local PostgreSQL; do not assume GitHub pushes migrate database records.
 3. Configure required secrets, email delivery, media storage, backups and access controls.
 4. Remove or set `STERLYN_CLIENT_PREVIEW=false` in Netlify, then redeploy.
-5. Test all key workflows, especially checkout and administrative access.
+5. Test guest enquiry capture, staff sign-in, order confirmation, private tracking and administrative permissions. Online checkout remains disabled.
 
-This preview is **not** a production-ready ecommerce launch. Do not share administrative credentials or confidential customer data with preview viewers.
+The obsolete standalone static preview under `sites/` has been removed. The optional preview mode lives in the main Next.js application. Use [Netlify deployment](docs/NETLIFY_DEPLOYMENT.md) for the live showroom release.
+
+This preview does not save enquiries or run administration. Do not share administrative credentials or confidential customer data with preview viewers.
 
 ## Secure deployment setting
 

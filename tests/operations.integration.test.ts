@@ -171,9 +171,9 @@ describe.skipIf(!enabled)('Concurrent inventory operations',()=>{
 });
 
 describe.skipIf(!enabled)('Scheduled publication',()=>{
- it('publishes once, records audit and rejects a suspended approver',async()=>{
+ it('publishes without mandatory MFA, records audit once and rejects a suspended approver',async()=>{
   const {schedulePublication,runSchedules}=await import('../src/lib/scheduling');const prior={...actor},id=randomUUID(),template=await db.product.findFirstOrThrow();const products:string[]=[],schedules:string[]=[];
-  await db.user.create({data:{id,email:id+'@integration.invalid',name:'Synthetic scheduled publisher',role:'catalogue',emailVerified:true,twoFactorEnabled:true,twoFactor:{create:{id:randomUUID(),secret:'synthetic-test-only',backupCodes:'synthetic-test-only',verified:true}}}});
+  await db.user.create({data:{id,email:id+'@integration.invalid',name:'Synthetic scheduled publisher',role:'catalogue',emailVerified:true}});
   actor.id=id;actor.role='catalogue';
   try{
    for(let n=0;n<2;n++){

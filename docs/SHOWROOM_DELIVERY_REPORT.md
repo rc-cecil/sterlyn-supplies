@@ -182,3 +182,17 @@ The production build, TypeScript and ESLint passed. Both browser checks passed: 
 Current dashboard screenshots are in ignored `out/efferd-dashboard/`. The local screenshot gallery at http://127.0.0.1:3005/ has been refreshed. No external email or WhatsApp message was sent. Work remains local, with no branch creation, push or deployment.
 
 Regression verification for this refinement: all 59 unit/PostgreSQL tests across 12 files passed with sequential files. PostgreSQL emitted an existing query-concurrency deprecation warning; there were no failing tests.
+
+## Netlify/Neon preparation — 11 November 2026
+
+Pulled `origin/main` with a fast-forward to `aa05000`. Removed the unused standalone `sites/sterlyn-supplies-client-preview` copy and 19 generated local log files; preserved the main application, public assets, existing databases/backups and walkthrough screenshots.
+
+Added `netlify.toml`, two scheduled Netlify functions, a bounded queue-delivery option, small PostgreSQL pools, direct migration URL support, and the private production database inspection/migration commands. Scheduled catalogue publishing now honors optional authenticator enrollment while retaining role/suspension checks. See [deployment instructions](NETLIFY_DEPLOYMENT.md).
+
+Verification: production build, TypeScript, ESLint and `git diff --check` passed. All 71 unit/PostgreSQL tests passed across 15 files, including scheduled-job preview safeguards, bounded queue processing and publication without mandatory MFA. The initial database-test attempt failed because the persisted local PostgreSQL instance was stopped; after starting it without resetting data, the suite passed. Production dependency audit found no known vulnerabilities.
+
+Release is **not yet published**: the current Netlify production setting still enables read-only preview, confirmed by HTTP 503 from `/api/health`. Netlify returns its saved database credentials masked. The ignored `.env.production.local` file has been prepared for the pooled Neon URL, but no Neon connection or migration has been claimed without those credentials. Existing production secrets were not replaced. No GitHub push or production setting change has been made in this preparation step.
+
+Email setup remains deferred by the business. SMTP delivery, customer verification/reset emails, and automatic order emails will not reach inboxes until configured. WhatsApp handoff and manual sharing of secure tracking links are the communication paths available without email. Arbitrary media uploads also require hosted object storage, antivirus and the isolated processor; the code retains those safeguards. A database-only deployment must not be described as supporting that pipeline.
+
+Both production-build browser checks passed: interactive responsive dashboard and the guest enquiry → reviewed order → owner-issued staff login → assigned fulfilment → private customer tracking workflow (2 passed). These used the isolated local test database, not Neon or the live Netlify site.
