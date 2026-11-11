@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { invitationTokenFromText } from '@/lib/owner-invitation';
+import { invitationStatusFromText, invitationTokenFromText } from '@/lib/owner-invitation';
 
 export default function OwnerSetupPage() {
   const [invitation, setInvitation] = useState('');
@@ -11,7 +11,8 @@ export default function OwnerSetupPage() {
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
   const [complete, setComplete] = useState(false);
-  const activeInvitation = pastedInvitation.trim() ? invitationTokenFromText(pastedInvitation) : invitation;
+  const pastedStatus = invitationStatusFromText(pastedInvitation);
+  const activeInvitation = pastedInvitation.trim() ? pastedStatus.token : invitation;
 
   useEffect(() => {
     const token = invitationTokenFromText(window.location.hash);
@@ -61,7 +62,8 @@ export default function OwnerSetupPage() {
             <input aria-label="Private setup link from Neon" type="password" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Paste your full setup_link here" value={pastedInvitation} onChange={e=>{setPastedInvitation(e.target.value);setMessage('');}} style={{padding:13,fontSize:16,border:'1px solid #b8c0b7',borderRadius:6}} />
           </label>
           <p style={{margin:0,fontSize:13,color:'#536055'}}>Paste the entire <code>setup_link</code> from the Neon SQL result. This also works if your browser removed the token from the address bar. The link stays hidden as you type.</p>
-          {activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#24553b'}}>Invitation format recognized. You can now choose your password.</p>}
+          {activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#24553b'}}>Complete private token detected (64/64 characters). You can now create your account.</p>}
+          {pastedInvitation.trim() && !activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#8a401b'}}>{pastedStatus.detectedCharacters > 0 ? `Only ${pastedStatus.detectedCharacters} of 64 token characters detected. In Neon, copy the complete setup_link value, not just the portion visible on screen.` : 'No complete setup token found. In Neon, copy the full setup_link result, including everything after #token=. Do not copy only the website address.'}</p>}
           <label style={{display:'grid',gap:7,fontSize:14}}>Create password
             <input aria-label="Create password" type="password" required minLength={16} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} style={{padding:13,fontSize:16,border:'1px solid #b8c0b7',borderRadius:6}} />
           </label>
@@ -70,7 +72,7 @@ export default function OwnerSetupPage() {
           </label>
           <p style={{margin:0,fontSize:13,color:'#536055'}}>Use at least 16 characters. A unique passphrase is recommended.</p>
           <button type="submit" disabled={pending || !activeInvitation} style={{padding:'14px 18px',background:'#244b38',color:'white',border:0,borderRadius:6,fontWeight:700,fontSize:15,cursor:'pointer',opacity:pending||!activeInvitation?0.55:1}}>{pending?'Creating account…':'Create owner account'}</button>
-          {!activeInvitation && <p role="status" style={{fontSize:13,color:'#8a401b'}}>Paste your private Neon setup link above to enable the button. The invitation works once and expires.</p>}
+          {!activeInvitation && !pastedInvitation.trim() && <p role="status" style={{fontSize:13,color:'#8a401b'}}>Paste your private Neon setup link above to enable the button. The invitation works once and expires.</p>}
           {message && <p role="alert" style={{fontSize:14,color:'#8a401b'}}>{message}</p>}
         </form>
       </>}
