@@ -236,3 +236,7 @@ Verification results:
 The email preview is in ignored `out/streamlined-workflow/09-completed-order-email.html`; workflow and responsive screenshots remain under `out/streamlined-workflow/` and `out/catalogue-review/`. These are synthetic isolated fixtures and their tracking records are cleaned up after verification. Raw check logs are under ignored `out/curation-verification/`.
 
 Remaining service configuration: actual customer email delivery (including verification/reset/recovery emails) is paused until a sender/SMTP service is configured. Media uploads still require hosted object storage, antivirus and isolated processing; those checks remain fail-closed. WhatsApp communication is a saved-enquiry handoff that the customer reviews and sends; inbound WhatsApp synchronization is not implemented. These limitations are not counted as verified production delivery.
+
+### Netlify build limit after the curation push
+
+Commit `fc6102b` reached GitHub, but Netlify skipped deploy `6af4f289f105adf8f8f53ea9` with **“Skipped due to account credit usage exceeded.”** No billing change or attempt to bypass the account limit was made. The existing published application remains live: a follow-up check returned HTTP 200/database connected and HTTP 200 for `/collections/sinks`, four cards, neither retired tap link. Thus the requested live database curation is visible; publishing the updated catalogue source and test additions requires restoring the Netlify allowance and retrying the build. This source release must not be described as newly deployed.
