@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { invitationStatusFromText, invitationTokenFromText } from '@/lib/owner-invitation';
 
 export default function OwnerSetupPage() {
@@ -43,7 +44,7 @@ export default function OwnerSetupPage() {
       setPastedInvitation('');
       setPassword('');
       setConfirmation('');
-      setMessage('Your owner account has been created. The business dashboard will be accessible when the production app is activated.');
+      setMessage('Your owner account is ready. Sign in with your owner email and the password you just chose.');
     } catch {
       setMessage('The setup request could not be completed. Please try again.');
     } finally {
@@ -55,13 +56,13 @@ export default function OwnerSetupPage() {
     <section style={{width:'100%',maxWidth:440,background:'white',border:'1px solid #e4e0d8',borderRadius:14,padding:'clamp(20px,5vw,40px)',boxShadow:'0 12px 40px rgba(0,0,0,0.06)'}}>
       <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.15em'}}>STERLYN SUPPLIES</span>
       <h1 style={{fontSize:30,lineHeight:1.15,margin:'18px 0'}}>Secure owner setup</h1>
-      {complete ? <p role="status">{message}</p> : <>
+      {complete ? <><p role="status">{message}</p><Link href="/staff" className="button" style={{marginTop:20}}>Sign in to your dashboard</Link></> : <>
         <p style={{color:'#536055',lineHeight:1.55}}>Choose a new password to activate your private owner account. This password is sent securely to the site and is never shared with ChatGPT.</p>
         <form onSubmit={submit} style={{display:'grid',gap:16,marginTop:26}}>
           <label style={{display:'grid',gap:7,fontSize:14}}>Private setup link from Neon
             <input aria-label="Private setup link from Neon" type="password" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Paste your full setup_link here" value={pastedInvitation} onChange={e=>{setPastedInvitation(e.target.value);setMessage('');}} style={{padding:13,fontSize:16,border:'1px solid #b8c0b7',borderRadius:6}} />
           </label>
-          <p style={{margin:0,fontSize:13,color:'#536055'}}>Paste the entire <code>setup_link</code> from the Neon SQL result. This also works if your browser removed the token from the address bar. The link stays hidden as you type.</p>
+          <p style={{margin:0,fontSize:13,color:'#536055'}}>Paste your complete private setup link if it was not detected automatically. You can use the link in your private setup instructions or the Neon SQL result. The link stays hidden as you type.</p>
           {activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#24553b'}}>Complete private token detected (64/64 characters). You can now create your account.</p>}
           {pastedInvitation.trim() && !activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#8a401b'}}>{pastedStatus.detectedCharacters > 0 ? `Only ${pastedStatus.detectedCharacters} of 64 token characters detected. In Neon, copy the complete setup_link value, not just the portion visible on screen.` : 'No complete setup token found. In Neon, copy the full setup_link result, including everything after #token=. Do not copy only the website address.'}</p>}
           <label style={{display:'grid',gap:7,fontSize:14}}>Create password
