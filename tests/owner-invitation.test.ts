@@ -1,22 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { invitationTokenFromText } from '../src/lib/owner-invitation';
+import { invitationStatusFromText, invitationTokenFromText } from '../src/lib/owner-invitation';
 
 const token = 'ab12cd34'.repeat(8);
 const link = `https://sterlynsupplies.netlify.app/owner-setup#token=${token}`;
 
 describe('one-time owner invitation parsing', () => {
-  it('accepts a complete token from a phone link', () => {
+  it('accepts complete raw tokens and full URLs', () => {
+    expect(invitationTokenFromText(token)).toBe(token);
     expect(invitationTokenFromText(link)).toBe(token);
   });
-  it('accepts the full JSON result copied from Neon', () => {
+  it('recognizes complete Neon SQL JSON results', () => {
     expect(invitationTokenFromText(JSON.stringify([{ setup_link: link }]))).toBe(token);
   });
-  it('accepts a raw token and encoded case', () => {
-    expect(invitationTokenFromText('  ' + token.toUpperCase() + '  ')).toBe(token);
+  it('handles URL-encoded links pasted from mobile', () => {
+    expect(invitationTokenFromText(encodeURIComponent(link))).toBe(token);
   });
-  it('rejects missing, partial, or malformed invitations', () => {
-    for (const value of ['', 'https://sterlynsupplies.netlify.app/owner-setup', link.slice(0, -1), '#token=' + 'a'.repeat(65)]) {
-      expect(invitationTokenFromText(value)).toBe('');
+  it('reports partial token length without revealing the contents', () => {
+    const status = invitationStatusFromText(link.slice(0,-32));
+    expect(status.token).toBe('');
+    expect(status.detectedCharacters).toBe(32);
+  });
+  it('does not accept missing or overlong tokens', () => {
+    for (const input of ['', 'https://sterlynsupplies.netlify.app/owner-setup',
+      '#token='+'a'.repeat(65), '#token='+'a'.repeat(63)]) {
+      expect(invitationTokenFromText(input)).toBe('');
     }
   });
 });
