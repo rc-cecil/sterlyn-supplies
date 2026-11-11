@@ -60,7 +60,7 @@ export default function OwnerSetupPage() {
           <label style={{display:'grid',gap:7,fontSize:14}}>Private setup link from Neon
             <input aria-label="Private setup link from Neon" type="password" autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="Paste your full setup_link here" value={pastedInvitation} onChange={e=>{setPastedInvitation(e.target.value);setMessage('');}} style={{padding:13,fontSize:16,border:'1px solid #b8c0b7',borderRadius:6}} />
           </label>
-          <p style={{margin:0,fontSize:13,color:'#536055'}}>Paste the entire <code>setup_link</code> from Neon's SQL result. This also works if your browser removed the token from the address bar. The link stays hidden as you type.</p>
+          <p style={{margin:0,fontSize:13,color:'#536055'}}>Paste the entire <code>setup_link</code> from the Neon SQL result. This also works if your browser removed the token from the address bar. The link stays hidden as you type.</p>
           {activeInvitation && <p role="status" style={{margin:0,fontSize:13,color:'#24553b'}}>Invitation format recognized. You can now choose your password.</p>}
           <label style={{display:'grid',gap:7,fontSize:14}}>Create password
             <input aria-label="Create password" type="password" required minLength={16} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} style={{padding:13,fontSize:16,border:'1px solid #b8c0b7',borderRadius:6}} />
