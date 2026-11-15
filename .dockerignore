@@ -2,8 +2,9 @@ node_modules
 .next
 .git
 .env
+.env.*
+!.env.example
 .local
-references
 test-results
 playwright-report
 out

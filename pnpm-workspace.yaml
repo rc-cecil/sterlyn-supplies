@@ -1,8 +1,4 @@
 allowBuilds:
-  '@embedded-postgres/linux-x64': false
-  '@embedded-postgres/linux-arm64': false
-  '@embedded-postgres/darwin-x64': true
-  '@embedded-postgres/darwin-arm64': true
   '@prisma/engines': true
   prisma: true
   esbuild: true

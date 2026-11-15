@@ -1,7 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 export function proxy(request:NextRequest){
  if(request.nextUrl.pathname.startsWith('/api/')){
-  if(process.env.STERLYN_CLIENT_PREVIEW==='true')return NextResponse.json({error:'This is a read-only client preview. Live services are disabled.'},{status:503});
   return NextResponse.next();
  }
  const nonce=Buffer.from(crypto.randomUUID()).toString('base64');

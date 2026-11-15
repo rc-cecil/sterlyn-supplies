@@ -1,90 +1,60 @@
 # Sterlyn Supplies Limited
 
-Next.js showroom and operations application. The supplied kitchen imagery is illustrative; all seeded catalogue entries are quote-only. No real prices, inventory, testimonials, or completed projects are implied.
+Next.js showroom and business operations application. Customers select products or inspirations, save an enquiry, and continue through WhatsApp. Staff manage enquiries, confirmed orders, external receipts and secure customer tracking. Online checkout and payment gateways are disabled.
 
-Collections contain six product families with three illustrative product previews each. The Inspiration journal has separate room/material stories and imagery. Content boundaries, reference research and safe refresh instructions are in [catalogue content](docs/CATALOGUE_CONTENT.md); exact image prompts and provenance are in [the product image manifest](docs/product-image-manifest.json).
+Official branding, catalogue imagery, Design Studio and the existing logo animation are retained. Illustrative catalogue imagery does not imply real stock, prices, testimonials or completed projects.
 
-The persistent enquiry, external receipt, order-status email and guest tracking workflow is documented in [showroom operations](docs/SHOWROOM_OPERATIONS.md). Configure the shared tracking encryption key and run the notification worker for the complete experience.
+## Deployment
 
-For the database-backed Netlify site, follow [Netlify + Neon deployment](docs/NETLIFY_DEPLOYMENT.md). The optional read-only preview does not provide live enquiries or administration. Additional Netlify scheduled functions process the existing notification queue and catalogue publications without a local worker; media uploads still need the hosted storage/scanning/processing services.
+Use Node 24 and pnpm. Follow [Netlify + Neon deployment](docs/NETLIFY_DEPLOYMENT.md) for the database-backed website. Netlify installs dependencies from `pnpm-lock.yaml` and runs `pnpm build`; the publish directory is `.next`.
 
-## Local development
+Every deploy requires PostgreSQL and the appropriate authentication and tracking configuration. There is no database-free demonstration mode. Keep credentials outside Git and configure hosting environment variables privately.
 
-Use Node 24 and pnpm. Run `pnpm install`, copy `.env.example` to `.env`, set a unique authentication secret, and configure PostgreSQL. Then:
+Operational commands, after installing dependencies:
 
 ```sh
-pnpm db:migrate
-pnpm db:seed
-pnpm dev
+pnpm db:production:check
+# Review existing migration history before applying pending migrations:
+pnpm db:production:migrate
+pnpm build
 ```
 
-For an isolated local PostgreSQL process, `pnpm db:local` runs on port 55432 with data under ignored `.local/postgres`. Its development connection is `postgresql://sterlyn:local-development-only@localhost:55432/sterlyn`. Never use these local-only credentials in production.
+Do not reset or seed an existing business database. Preserve the existing authentication secret and tracking encryption key.
 
-The current workspace has a locally generated secret in ignored `.env`. No production credentials are included.
+## Background services
 
-## Docker
+- Netlify scheduled functions process the existing notification queue and due catalogue publications. Queued messages are not evidence of delivery.
+- External email requires an approved SMTP service and sender configuration. Until configured, staff can share tracking links manually.
+- New uploads require persistent S3-compatible storage, antivirus scanning and the isolated media processor. Bundled website imagery does not depend on those upload services.
+- `scripts/worker.ts`, the production Dockerfiles, `compose.production.yaml` and `ops/` remain for these services. See [release operations](docs/RELEASE_OPERATIONS.md). Use the production Compose file explicitly with `-f compose.production.yaml`.
 
-For local demonstration, use the private demo configuration commands below. Apply the illustrative seed explicitly once using `docker compose --env-file .local/demo.env -f compose.yaml -f compose.demo.yaml exec web node --import tsx scripts/seed.ts`. Initialize the configured S3 bucket before media uploads. Docker web, worker, PostgreSQL, SMTP capture and source-built MinIO have run successfully. Database health, catalogue response, SMTP delivery, object write/read/delete and container-native backup restoration were verified. The restricted processor and antivirus services have also passed upload/scan/transcode/approval/publication/rollback and failure-recovery checks.
+## Owner and staff access
 
-For deployment, use `compose.production.yaml` alone and follow [release operations](docs/RELEASE_OPERATIONS.md). It excludes demo mail and credentials, coordinates migrations, and uses the documented Next standalone server. Do not expose an unreviewed production instance.
+Follow [owner setup](docs/OWNER_SETUP.md). The protected owner provisioning command refuses to create a second owner. Supply credentials privately; never commit them. The owner provides staff work emails and passwords. Authenticator-app enrollment remains optional, and role permissions remain enforced.
 
-## Owner access
+See the [staff guide](docs/STAFF_GUIDE.md) and [showroom operations](docs/SHOWROOM_OPERATIONS.md) for enquiries, assignments, order progress, receipts and tracking.
 
-Set `OWNER_EMAIL` and a unique `OWNER_PASSWORD` (16+ characters) in the process environment, then run `pnpm setup:owner`. The command refuses to create a second owner. Sign in at `/account` using your password. Role-based administration does not require authenticator enrollment. Never commit owner credentials.
+## Automated quality checks
 
-## Routes
-
-`/`, `/collections`, `/products/[slug]`, `/inspiration`, `/design-studio`, `/cart`, `/checkout`, `/account`, and `/admin`. Company, contact, FAQ, delivery, returns, privacy and terms pages are CMS-backed. Legal copy needs business review before public launch.
-
-## Integrations
-
-- Online payments and AI assistance are deliberately disabled, regardless of legacy credentials. The storefront accepts quotations only.
-- Google video generation has been removed; local uploads and rendering remain available.
-- SMTP: configure host, port, credentials and `MAIL_FROM`; run `pnpm worker`. Verification/reset messages persist in the notification queue until SMTP is configured.
-- Object storage: configure the S3 variables and bucket. Imported media remains quarantined until ClamAV scanning and FFmpeg processing succeed. Fresh antivirus definitions are required.
-
-## Verification
+GitHub retains the unit, isolated PostgreSQL, migration, security, build and browser checks. These checks do not run against Neon production. Test launchers and test fixtures remain for CI; local demo infrastructure and old generated reports have been removed.
 
 ```sh
+pnpm install --frozen-lockfile
+pnpm exec prisma generate
 pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
-pnpm test:e2e
 ```
 
-Browser tests default to port 3002 and a separate `sterlyn_test` database. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` on machines without macOS Chrome. Run migrations and seed against that database before launching the test server. Never point acceptance tests at production.
+Database integration and browser journeys require a separately configured disposable test database. Refer to `.github/workflows/verify.yml`; never point them at production.
 
-## Media
+## Assets and maintenance
 
-`pnpm media:studio` opens the four Remotion templates. `pnpm media:render` renders the source-derived 3D monogram. HyperFrames source is under `media/hyperframes`. Before/after footage is intentionally absent until approved source images exist.
+Published assets remain under `public/`. The existing logo video and runtime 3D animation are retained. Reference boards and Remotion/HyperFrames authoring sources were removed; restoring them from Git history is required to reuse those authoring tools.
 
-## Release status
+Image provenance and catalogue guidance remain in [catalogue content](docs/CATALOGUE_CONTENT.md) and the [product image manifest](docs/product-image-manifest.json). Historical product assets may still be referenced by saved enquiries or orders and must not be deleted solely because a product is archived.
 
-Read `IMPLEMENTATION_STATUS.md`. This is an implementation in progress, not a claim that every master-spec acceptance gate is complete. The legacy `/shop` route redirects to `/collections`. Public indexing is disabled until `PUBLIC_LAUNCH=true`. Online checkout remains disabled. Review the branch, operational checks and business configuration before public launch.
+Production database checks, migration tools, backups, restore verification, email diagnostics and owner provisioning are retained. Private local databases, backups and keys were not included in the cleanup.
 
-## Local demo email and Docker
-
-Run `pnpm demo:config` once to generate private, ignored demo infrastructure secrets (no owner credentials). Start the local stack with:
-
-```sh
-docker compose --env-file .local/demo.env -f compose.yaml -f compose.demo.yaml up --build -d
-```
-
-Demo showroom: `http://localhost:3100`. Docker captured email: `http://localhost:8026`. Mailpit captures SMTP locally; it does not deliver to business addresses. The demo has no default owner login. Supply owner credentials privately when you want owner access. Use your approved business SMTP and sender details later.
-
-For the existing native development server, run `mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025`, set `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025`, `MAIL_FROM=Sterlyn Demo <showroom@sterlyn.test>` and `STAFF_EMAIL=team@sterlyn.test` in ignored `.env`, then run `pnpm worker`.
-
-Restore verification uses only `sterlyn_test`, creates a separate temporary restore database, compares all public-table row counts and full-row fingerprints, and removes that temporary database afterward:
-
-```sh
-PG_TOOLS_PATH=/usr/local/opt/libpq/bin pnpm db:verify-restore
-```
-
-On this workspace, PostgreSQL 18 client tools were built from official source under ignored `.local/tools`; the verified command is:
-
-```sh
-PG_TOOLS_PATH="$PWD/.local/tools/postgresql-18.0/src/bin/pg_dump" DYLD_LIBRARY_PATH="$PWD/.local/tools/postgresql-18.0/src/interfaces/libpq" pnpm db:verify-restore
-```
-
-The portable demo inbox binary is `.local/tools/mailpit/mailpit`. `tsx scripts/verify-demo-mail.ts` checks registration, queued delivery, SMTP capture and verification using a temporary customer account that it removes afterward.
+See [deployment cleanup](docs/DEPLOYMENT_CLEANUP.md) for the removal record. Historical implementation and audit reports are preserved as evidence rather than current setup instructions.

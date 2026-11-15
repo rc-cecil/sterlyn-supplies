@@ -201,7 +201,7 @@ html[data-input-modality="pointer"] :focus{outline:none}
 .ops-section details{padding:16px 0}
 .enquiry-success{padding:28px;background:#e8ecdf;border-radius:8px}
 .enquiry-success .text-link{display:block;margin-top:22px}
-.enquiry-preview-notice{background:#e8ecdf;padding:18px;margin-bottom:20px}
+
 .tracking-page{max-width:1100px;margin:auto}
 .tracking-heading{display:flex;justify-content:space-between;gap:30px;padding:24px 0 30px}
 .tracking-heading h2{font-size:44px;margin:12px 0}

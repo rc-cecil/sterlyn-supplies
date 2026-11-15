@@ -64,7 +64,7 @@ pnpm exec tsx scripts/test-server.ts
 pnpm test:e2e
 ```
 
-Docker demo acceptance uses the existing private `.local/demo.env` with compose.yaml + compose.demo.yaml. `DEMO_MEDIA_VERIFY=true node --import tsx scripts/verify-docker-media.ts` inside the worker creates disposable synthetic fixtures and refuses to bootstrap over an existing owner. It must never target production. Mailpit inbox is localhost:8026; showroom is localhost:3100. Actual worker-stop verification is `DEMO_MEDIA_VERIFY=true node scripts/verify-worker-interruption.mjs` from the host with Docker access. It refuses active work, pauses the processor, kills only the demo worker during a disposable fixture, accelerates that fixture lease expiry, restarts services, retries and verifies completion. Never run this interruption fixture on production or during other staff media work.
+The former local Docker demo and its private configuration were removed during deployment cleanup. Legacy Docker interruption/media verification scripts are retained as test references, but require a separately provisioned disposable stack; do not run them against production. Current GitHub checks use an isolated PostgreSQL service.
 
 ## Launch decision
 

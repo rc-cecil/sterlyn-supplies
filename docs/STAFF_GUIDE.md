@@ -46,7 +46,7 @@ The Efferd Dashboard 1 composition is adapted to Sterlyn's real work. **Needs at
 
 ## Local verification
 
-The latest screenshot gallery is saved in [the local walkthrough](../out/staff-walkthrough/index.html). Run `pnpm walkthrough:serve` and open http://127.0.0.1:3005/ to view it. The current browser test covers guest submission, owner-issued credentials, one-step order creation, assigned staff completion and customer tracking using only synthetic records in `sterlyn_test`. No WhatsApp message or external email is sent.
+The previous local screenshot walkthrough was removed during deployment cleanup. Follow the workflow in this guide. Automated acceptance journeys remain in GitHub and use only synthetic records in `sterlyn_test`; they do not send WhatsApp messages or external email.
 
 All changes are local on `main`, without a new branch, push or production deployment.
 

@@ -21,7 +21,6 @@ Configure on Netlify with **Builds and Functions** scopes; changing values requi
 | `BETTER_AUTH_URL` | `https://sterlynsupplies.netlify.app` |
 | `BETTER_AUTH_SECRET` | Existing strong production secret, 32+ characters |
 | `TRACKING_ENCRYPTION_KEY` | Stable 64 hexadecimal characters; preserve an existing key |
-| `STERLYN_CLIENT_PREVIEW` | `false` after database/migrations are verified |
 | `PUBLIC_LAUNCH` | Enable indexing only after business/legal review |
 
 Owner/staff password authentication and permissions remain enforced. Authenticator enrollment is optional, including for scheduled catalogue publishing. Do not deploy local testing bypasses. Create the owner privately using the existing owner setup workflow; do not publish invitation tokens or passwords.
@@ -45,7 +44,7 @@ The existing Docker worker can still be used for larger queues and media. Schedu
 
 Run TypeScript, ESLint, unit and isolated PostgreSQL tests, production build, browser customer/staff workflow and dependency audit. Never run destructive test fixtures against Neon production.
 
-Before publishing, verify database migrations, owner login, catalogue, enquiry persistence/idempotency, staff assignment, order conversion, tracking privacy and scheduled functions. The public `/api/health` must report a database connection; preview mode returns 503 and must not be described as operational.
+Before publishing, verify database migrations, owner login, catalogue, enquiry persistence/idempotency, staff assignment, order conversion, tracking privacy and scheduled functions. The public `/api/health` must report a database connection. The database-free demonstration has been removed; every deploy requires backend configuration. Remove any obsolete `STERLYN_CLIENT_PREVIEW` setting from the hosting dashboard when maintaining its environment.
 
 Inspect the deployed function schedule and logs after publication. A queued email or a successful build is not evidence of inbox delivery or a verified end-to-end launch.
 

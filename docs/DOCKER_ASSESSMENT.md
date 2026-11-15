@@ -1,3 +1,7 @@
+# Historical assessment
+
+The local `compose.yaml` and `compose.demo.yaml` files described below were removed during deployment cleanup. This is historical evidence, not current setup instructions. Production services remain in `compose.production.yaml`.
+
 # Docker assessment — 18 October 2026
 
 Read-only assessment completed before implementation changes. No Docker architecture, website design, containers, volumes or data were removed or reset.
