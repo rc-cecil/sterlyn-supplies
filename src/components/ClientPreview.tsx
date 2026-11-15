@@ -1,3 +1,4 @@
+import {HomeStory,HomeServices,HomeProjectGuide,HomeFacebookGallery} from '@/components/HomeCompany';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -67,15 +68,16 @@ function HomePreview() {
   return <>
     <Hero media={null} />
     <section className="intro-section"><div className="intro-label"><span className="small-rule" /> A MORE CONSIDERED HOME</div><div><h2>Not just a kitchen.<br/><em>Your favourite place to be.</em></h2><p>Quiet mornings. Conversations that linger. Beautiful spaces shaped around the way you live.</p></div></section>
-    <section className="collections-section">
+    <HomeStory/><section className="collections-section">
       <div className="section-heading"><h2>Kitchen collections.<br/><em>Considered details.</em></h2><div><p>Browse the separate fitted kitchen product images, distinct from our Inspiration journal.</p><Link className="text-link" href="/collections">Discover the collections <ArrowUpRight size={18} /></Link></div></div>
       <PreviewProductCards items={catalogueProducts.filter(item=>item.category==='kitchens').slice(0,3)} featured/>
     </section>
-    <section className="studio-promo">
+    <HomeServices/><section className="studio-promo">
       <div className="studio-promo-image"><Image src="/images/kitchen-walnut-v2.webp" alt="Illustrative walnut kitchen" fill sizes="(max-width: 700px) 100vw, 60vw" /></div>
       <div className="studio-promo-copy"><span className="eyebrow">FROM POSSIBILITY TO PERSPECTIVE</span><h2>Imagine it.<br/>Arrange it.<br/><em>Make it yours.</em></h2><p>Try the interactive 2D and 3D Design Studio with sample modules. Layouts stay in your browser; share your product selections with us on WhatsApp.</p><Link href="/design-studio" className="button">Explore the design studio <ArrowUpRight size={18} /></Link></div>
     </section>
-    <section className="materials-section"><div className="material-copy"><h2>The beauty<br/>is in the <em>details.</em></h2><p>Wood, stone and a thoughtfully chosen palette.</p><Link href="/inspiration" className="text-link">Read the material stories <ArrowUpRight size={17} /></Link></div><Link className="material-tile stone" href="/inspiration/marble-at-dusk"><span>01 / Stone</span><strong>A quieter statement.</strong><ArrowUpRight /></Link><Link className="material-tile wood" href="/inspiration/the-walnut-room"><span>02 / Wood</span><strong>Warmth, naturally.</strong><ArrowUpRight /></Link></section>
+    <HomeFacebookGallery/>
+    <HomeProjectGuide/>
   </>;
 }
 
@@ -92,7 +94,6 @@ export default function ClientPreview({ route, slug }: { route: string; slug: st
     const story = slug[1] ? inspirationStories.find((entry) => entry.slug === slug[1]) : undefined;
     content = story ? <InspirationArticle story={story} /> : <InspirationIndex />;
   }
-  else if (route === 'about') content = <section className="page-wrap"><PreviewIntro tag="OUR STORY" title="Considered spaces. Everyday living." description="Sterlyn Supplies Limited is a kitchen furniture and supplies brand. Explore our concept collection, shape your ideas and imagine the possibilities for your space." /><div className="studio-promo" style={{marginTop: 50}}><div className="studio-promo-image"><Image src="/images/kitchen-emerald-v2.webp" fill alt="Illustrative emerald kitchen concept" sizes="(max-width: 700px) 100vw, 60vw" /></div><div className="studio-promo-copy"><h2>Style. Quality.<br/><em>Innovation.</em></h2><p>The imagery is illustrative. Materials, availability and final specifications are confirmed during quotation.</p><Link className="text-link" href="/inspiration">Explore our perspectives <ArrowUpRight size={18} /></Link></div></div></section>;
   else if (route === 'design-studio') content = <Designer preview/>;
   else if (route === 'contact') content = <ContactPage preview />;
   else if (route === 'cart' || route === 'checkout') content = <EnquiryBagPage />;

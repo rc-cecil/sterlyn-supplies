@@ -18,8 +18,8 @@ export function Header(){
         <span className="brand-name">STERLYN<small>SUPPLIES</small></span>
       </Link>
       <nav aria-label="Main navigation" className={menu?'main-nav open':'main-nav'}>
-        {[['/collections','Our collections'],['/inspiration','Inspiration'],['/about','Our story'],['/contact','Contact us']].map(([href,label])=>
-          <Link key={href} href={href} className={path===href?'active':''}>{label}</Link>)}
+        {[['/collections','Our collections'],['/inspiration','Inspiration'],['/#our-story','Our story'],['/contact','Contact us']].map(([href,label])=>
+          <Link key={href} href={href} onClick={()=>setMenu(false)} className={path===href?'active':''}>{label}</Link>)}
         <Link href="/design-studio" className="mobile-studio">Design your space <ArrowUpRight size={16}/></Link>
         <Link href="/account/profile" className="mobile-studio">Your profile <ArrowUpRight size={16}/></Link>
         <Link href="/cart" className="mobile-studio">Your enquiry list <ArrowUpRight size={16}/></Link>

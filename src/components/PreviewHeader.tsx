@@ -8,7 +8,7 @@ import { EnquiryBasketLink } from './ShowcaseEnquiry';
 const links = [
   ['/collections', 'Our collections'],
   ['/inspiration', 'Inspiration'],
-  ['/about', 'Our story'],
+  ['/#our-story', 'Our story'],
   ['/contact', 'Contact us'],
 ] as const;
 
