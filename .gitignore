@@ -14,3 +14,6 @@ out/
 
 .pnpm-store/
 .netlify/
+
+compose.oracle-release.yaml
+compose.oracle-release.yaml.tmp.*

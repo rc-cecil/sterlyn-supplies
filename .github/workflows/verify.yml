@@ -2,7 +2,7 @@ name: Verify Sterlyn
 on: [push, pull_request]
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   application:
     runs-on: ubuntu-latest
@@ -24,6 +24,8 @@ jobs:
       PUBLIC_LAUNCH: 'false'
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Oracle deployment script
+        run: bash -n scripts/deploy-oracle.sh
       - uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
@@ -48,7 +50,8 @@ jobs:
         run: |
           pnpm exec tsx scripts/test-server.ts &
           for attempt in $(seq 1 30); do curl -fsS http://localhost:3002/api/health && break || sleep 2; done
-          pnpm test:e2e
+          pnpm exec playwright test tests/e2e/product-management.spec.ts
+          pnpm test:e2e --grep-invert 'nontechnical product editor publishes and moves products'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,3 +60,60 @@ jobs:
             test-results/
             playwright-report/
             out/release-evidence/
+
+
+  deploy:
+    name: Approved Oracle production deployment
+    needs: application
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    environment:
+      name: production
+      url: https://sterlynsupplies.com
+    concurrency:
+      group: sterlyn-oracle-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy verified commit
+        shell: bash
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER }}
+          ORACLE_DEPLOY_KEY: ${{ secrets.ORACLE_DEPLOY_KEY }}
+          ORACLE_KNOWN_HOSTS: ${{ secrets.ORACLE_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+
+          for name in ORACLE_HOST ORACLE_USER ORACLE_DEPLOY_KEY ORACLE_KNOWN_HOSTS; do
+            test -n "${!name}" || {
+              echo "Missing required deployment secret: $name"
+              exit 1
+            }
+          done
+
+          umask 077
+          mkdir -p "$HOME/.ssh"
+
+          printf '%s\n' "$ORACLE_DEPLOY_KEY" > "$HOME/.ssh/sterlyn_actions"
+          printf '%s\n' "$ORACLE_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+
+          chmod 600 "$HOME/.ssh/sterlyn_actions" "$HOME/.ssh/known_hosts"
+
+          bash -n scripts/deploy-oracle.sh
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+          ssh -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=8 \
+            -i "$HOME/.ssh/sterlyn_actions" \
+            "$ORACLE_USER@$ORACLE_HOST" \
+            "bash -se -- '$GITHUB_SHA'" \
+            < scripts/deploy-oracle.sh

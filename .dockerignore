@@ -9,3 +9,6 @@ test-results
 playwright-report
 out
 *.tsbuildinfo
+
+compose.oracle-release.yaml
+compose.oracle-release.yaml.tmp.*
