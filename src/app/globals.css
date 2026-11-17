@@ -329,12 +329,3 @@ html[data-input-modality="pointer"] :focus{outline:none}
 @media(max-width:800px){.home-story{grid-template-columns:minmax(0,1fr);padding:56px 7%;gap:32px}.home-story-image{min-height:0;aspect-ratio:1.15}.home-story-copy>p{margin-top:20px}.home-services{padding:56px 7%}.home-project-guide{padding:56px 7%}.home-project-heading{grid-template-columns:minmax(0,1fr);gap:24px}.home-project-guide ol{grid-template-columns:minmax(0,1fr);gap:28px;margin:36px 0}.home-project-footer{align-items:flex-start;flex-direction:column;gap:24px}.home-project-footer .button{width:100%;justify-content:space-between}.home-story h2,.home-services h2,.home-project-guide h2{font-size:42px}.home-service-list h3{font-size:30px}}
 
 .home-story{scroll-margin-top:100px}
-.home-facebook-gallery{padding:100px 8%;border-top:1px solid var(--line)}
-.home-facebook-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:60px;align-items:end;margin-bottom:44px}
-.home-facebook-heading h2{font-size:clamp(40px,4.2vw,62px);line-height:1.05;letter-spacing:-.025em}.home-facebook-heading h2 em{color:#626d55}
-.home-facebook-heading p,.home-facebook-note{font-size:14px;line-height:1.85;color:var(--muted);max-width:62ch}.home-facebook-heading .button{margin-top:22px;gap:14px;min-height:44px}
-.home-facebook-photos{display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:start}.home-facebook-photos figure{margin:0;min-width:0}.home-facebook-photos figure:nth-child(2){margin-top:100px}
-.home-facebook-photos figure>a{display:block;overflow:hidden}.home-facebook-photos img{display:block;width:100%;height:auto;transition:transform .6s cubic-bezier(.16,1,.3,1)}.home-facebook-photos a:hover img{transform:scale(1.025)}
-.home-facebook-photos figcaption{padding-top:20px}.home-facebook-photos h3{font-size:31px;line-height:1.2}.home-facebook-photos figcaption>span{display:block;margin-top:10px;color:var(--muted);font-size:11px}.home-facebook-note{margin-top:36px;max-width:80ch;font-size:12px}
-@media(max-width:800px){.home-facebook-gallery{padding:56px 7%}.home-facebook-heading{grid-template-columns:minmax(0,1fr);gap:24px;margin-bottom:32px}.home-facebook-heading h2{font-size:42px}.home-facebook-photos{grid-template-columns:minmax(0,1fr);gap:36px}.home-facebook-photos figure:nth-child(2){margin-top:0}.home-facebook-photos h3{font-size:29px}}
-@media(prefers-reduced-motion:reduce){.home-facebook-photos img{transition:none}.home-facebook-photos a:hover img{transform:none}}
