@@ -12,6 +12,7 @@ describe('storefront indexing',()=>{
   const metadata=storefrontMetadata(details);
   expect(metadata.robots).toEqual({index:true,follow:true});
   expect(metadata.alternates?.canonical).toBe('https://sterlynsupplies.com/products/walnut');
+  expect(storefrontMetadata({path:'/',description:details.description}).title).toEqual({absolute:'Sterlyn Supplies — Kitchen design & furniture in Accra'});
   expect(metadata.openGraph).toMatchObject({url:metadata.alternates?.canonical,title:'Walnut | Sterlyn Supplies'});
   expect(storefrontMetadata({...details,index:false}).robots).toEqual({index:false,follow:true});
   vi.stubEnv('PUBLIC_LAUNCH','false');
