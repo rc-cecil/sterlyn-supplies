@@ -24,7 +24,44 @@ test('one-step agreement creates tracking; owner-issued staff completes only ass
   process.env.TRACKING_ENCRYPTION_KEY=process.env.TRACKING_ENCRYPTION_KEY||'33'.repeat(32);const token=decryptTracking(order.trackingCipher!);const tracking=await guest.newPage();await tracking.goto(origin+'/track#'+token);await expect(tracking.getByRole('heading',{name:'Confirmed',exact:true})).toBeVisible();await expect(tracking.locator('main')).not.toContainText(email);
   // A second, unassigned order proves that staff cannot access or update arbitrary work.
   const product=await db.product.findFirstOrThrow({where:{status:'published'}});const second=await page.request.post('/api/enquiries',{headers:{origin},data:{requestKey:randomUUID(),name:'Other synthetic request',email,items:[{type:'product',slug:product.slug,quantity:1}]}});expect(second.ok()).toBe(true);const secondQuote=await second.json();quoteIds.push(secondQuote.id);const other=await page.request.post('/api/admin/convert-quote',{headers:{origin},data:{id:secondQuote.id,amount:10000,address:'Other synthetic address',confirmAgreement:true,confirmCustomer:true}});expect(other.ok()).toBe(true);const otherOrder=(await other.json()).record;orderIds.push(otherOrder.id);
-  const staffPage=await colleague.newPage();await staffPage.goto(origin+'/staff');await staffPage.getByLabel('Work email / login').fill(staffEmail);await staffPage.getByLabel('Password',{exact:true}).fill(password);await staffPage.getByRole('button',{name:'Open my workspace'}).click();await expect(staffPage).toHaveURL(/\/admin$/);await expect(staffPage.locator('.workspace-records')).toContainText(order.reference!);await expect(staffPage.locator('.workspace-records')).not.toContainText(otherOrder.reference);const denied=await staffPage.request.post('/api/admin/orders',{headers:{origin},data:{id:otherOrder.id,version:1,status:'processing'}});expect(denied.status()).toBe(403);
+  const staffPage=await colleague.newPage();await staffPage.goto(origin+'/staff');await staffPage.getByLabel('Work email / login').fill(staffEmail);await staffPage.getByLabel('Password',{exact:true}).fill(password);let staffSignedIn = false;
+
+for (let attempt = 0; attempt < 2; attempt++) {
+  const responsePromise = staffPage.waitForResponse(
+    response =>
+      new URL(response.url()).pathname === '/api/auth/sign-in/email' &&
+      response.request().method() === 'POST'
+  );
+
+  await staffPage.getByRole('button', {
+    name: 'Open my workspace'
+  }).click();
+
+  const response = await responsePromise;
+
+  if (response.status() !== 429) {
+    expect(
+      response.ok(),
+      'Staff sign-in returned HTTP ' + response.status()
+    ).toBe(true);
+
+    staffSignedIn = true;
+    break;
+  }
+
+  const retryAfter = Number(response.headers()['retry-after']);
+  const waitSeconds =
+    Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(65, retryAfter + 1)
+      : 61;
+
+  await staffPage.waitForTimeout(waitSeconds * 1000);
+}
+
+expect(staffSignedIn).toBe(true);
+await expect(staffPage).toHaveURL(/\/admin$/, {
+  timeout: 15000
+});await expect(staffPage.locator('.workspace-records')).toContainText(order.reference!);await expect(staffPage.locator('.workspace-records')).not.toContainText(otherOrder.reference);const denied=await staffPage.request.post('/api/admin/orders',{headers:{origin},data:{id:otherOrder.id,version:1,status:'processing'}});expect(denied.status()).toBe(403);
   await staffPage.setViewportSize({width:1440,height:1000});await staffPage.screenshot({path:'out/streamlined-workflow/03-assigned-staff-workspace.png',fullPage:true});await staffPage.setViewportSize({width:390,height:844});expect(await staffPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await staffPage.screenshot({path:'out/streamlined-workflow/04-staff-phone.png',fullPage:true});await staffPage.setViewportSize({width:1440,height:1000});await staffPage.locator('.workspace-records a').filter({hasText:order.reference!}).click();
   for(const action of ['Start processing','Mark ready for delivery','Mark dispatched','Mark delivered','Complete order']){await staffPage.getByRole('button',{name:action,exact:true}).click();await expect(staffPage.locator('.ops-success-panel')).toContainText('Saved successfully');await expect(staffPage.locator('textarea[required]')).toHaveCount(0);await expect(staffPage.getByRole('combobox',{name:'Order status'})).toHaveCount(0);}
   await expect(staffPage.locator('.order-next-action')).toContainText('This order is completed');await expect(staffPage.getByRole('button',{name:'Complete order',exact:true})).toHaveCount(0);expect(await db.orderEvent.count({where:{orderId:order.id}})).toBe(6);expect(await db.notification.count({where:{recipient:email}})).toBe(7);await staffPage.screenshot({path:'out/streamlined-workflow/05-staff-completed.png',fullPage:true});await tracking.reload();await expect(tracking.getByRole('heading',{name:'Completed',exact:true})).toBeVisible();await tracking.screenshot({path:'out/streamlined-workflow/06-customer-tracking.png',fullPage:true});

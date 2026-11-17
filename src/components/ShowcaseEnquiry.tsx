@@ -205,7 +205,7 @@ export function ContactPage() {
         <a href={GENERAL_WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
           <MessageCircle size={21} /><span><strong>WhatsApp · Preferred</strong><small>Chat with our team</small></span><ArrowUpRight size={17} />
         </a>
-        <div className="enquiry-method-unavailable"><Mail size={21} /><span><strong>Business email</strong><small>Coming after domain setup</small></span></div>
+        <a href="mailto:admin@sterlynsupplies.com"><Mail size={21} /><span><strong>Business email</strong><small>admin@sterlynsupplies.com</small></span><ArrowUpRight size={17} /></a>
         <a href={'tel:' + BUSINESS_PHONE}><Phone size={21} /><span><strong>Call us</strong><small>Speak with our team</small></span><ArrowUpRight size={17} /></a>
         <a href={BUSINESS_FACEBOOK} target="_blank" rel="noopener noreferrer"><span aria-hidden="true">f</span><span><strong>Facebook</strong><small>Sterlyn Supplies</small></span><ArrowUpRight size={17} /></a>
       </aside>
