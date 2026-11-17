@@ -4,7 +4,7 @@ The owner approved the deletion proposal in this chat before removal. Changes ar
 
 ## Removed source and configuration
 
-- `src/components/ClientPreview.tsx`, `src/components/PreviewHeader.tsx`, `CLIENT-PREVIEW.md`: database-free showroom demonstration. Removed its route, metadata, API-proxy and scheduled-function branches, the example environment flag, and obsolete preview-only test expectations. Backend configuration is now required for every deployment. Authentication and role checks remain enforced.
+- `src/components/ClientPreview.tsx`, `src/components/PreviewHeader.tsx`, `CLIENT-PREVIEW.md`: database-free showroom demonstration. Removed its route, metadata, API-proxy, Contact/Design Studio fallback and scheduled-function branches, the example environment flag, unused preview styling, and obsolete preview-only test expectations. Backend configuration is now required for every deployment. Authentication and role checks remain enforced.
 - `compose.yaml`, `compose.demo.yaml`, `scripts/demo-config.ts`, `scripts/local-db.ts`, private `.local/demo.env`: local/demo infrastructure and embedded database launcher. Removed `demo:config` and `db:local` package commands, the `embedded-postgres` dependency and its build permissions. Local PostgreSQL data, backups and keys are preserved.
 - `scripts/serve-walkthrough.mjs`: server for the old local screenshot gallery. Removed the `walkthrough:serve` package command and replaced the dead staff-guide link with workflow guidance.
 - `references/`: design boards and original concept-image working references. Published images and image provenance records remain.
@@ -32,6 +32,18 @@ Docker build exclusions now also cover private `.env.*` files while permitting t
 
 ## Verification
 
-Pending final verification. Generated output and dependencies will be removed after checks, leaving no local build or installed dependencies in the final checkout.
+Passed before removing generated output and installed dependencies:
+
+- `pnpm install --frozen-lockfile`: successful, including normal supply-chain policy verification of 826 lockfile entries. The initial offline attempt could not obtain metadata; the normal online install succeeded.
+- Prisma client generation: successful.
+- TypeScript `tsc --noEmit`: successful.
+- ESLint: successful.
+- Vitest: 11 files / 41 tests passed; 4 PostgreSQL integration files / 31 tests skipped because the isolated database suite was not enabled. No production database fixtures were run.
+- Production Next.js build: successful, including framework TypeScript checks and route generation. The sandboxed build stalled and was stopped; the permitted build completed normally.
+- `git diff --check`: successful.
+
+Checks used the installed Prisma, TypeScript, ESLint, Vitest and Next.js entry points directly after the verified install; pnpm's script launcher attempted an unnecessary reinstall in this environment. No dependency policy or compiler checks were disabled. Browser and PostgreSQL integration checks were not rerun for this cleanup; their suites and GitHub workflow remain.
+
+Generated output and installed dependencies were removed after verification. Netlify recreates them during its build. Published assets, Prisma migrations and the GitHub verification workflow have no changes.
 
 No database migration, reset, production data modification, external email, WhatsApp message or deployment is included.
