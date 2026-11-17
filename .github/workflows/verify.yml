@@ -50,7 +50,8 @@ jobs:
         run: |
           pnpm exec tsx scripts/test-server.ts &
           for attempt in $(seq 1 30); do curl -fsS http://localhost:3002/api/health && break || sleep 2; done
-          pnpm test:e2e
+          pnpm exec playwright test tests/e2e/product-management.spec.ts
+          pnpm test:e2e --grep-invert 'nontechnical product editor publishes and moves products'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -66,6 +67,7 @@ jobs:
     needs: application
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: read
     environment:
@@ -103,6 +105,7 @@ jobs:
           chmod 600 "$HOME/.ssh/sterlyn_actions" "$HOME/.ssh/known_hosts"
 
           bash -n scripts/deploy-oracle.sh
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
 
           ssh -o BatchMode=yes \
             -o IdentitiesOnly=yes \

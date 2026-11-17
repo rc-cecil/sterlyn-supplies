@@ -1,1 +1,9 @@
-export default function robots(){return {rules:{userAgent:'*',allow:process.env.PUBLIC_LAUNCH==='true'?'/':undefined,disallow:process.env.PUBLIC_LAUNCH==='true'?['/admin','/account','/api','/checkout','/order-confirmation']:['/']},sitemap:(process.env.BETTER_AUTH_URL||'http://localhost:3000')+'/sitemap.xml'};}
+import type {MetadataRoute} from 'next';
+import {storefrontIndexing,storefrontOrigin} from '@/lib/storefront-seo';
+
+export const dynamic='force-dynamic';
+export default function robots():MetadataRoute.Robots{
+ // Allow crawlers to read noindex on non-public pages and redirects.
+ return storefrontIndexing()?{rules:{userAgent:'*',allow:'/'},sitemap:storefrontOrigin+'/sitemap.xml'}:
+  {rules:{userAgent:'*',disallow:'/'}};
+}

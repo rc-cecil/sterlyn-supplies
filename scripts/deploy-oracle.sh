@@ -75,7 +75,8 @@ shape=[
  for line in lines
 ]
 
-if shape!=expected:
+launch=expected[:3]+['environment:', 'PUBLIC_LAUNCH: "true"']+expected[3:]
+if shape not in (expected, launch):
  raise SystemExit(
   "STOP: Release override contains unexpected configuration. "
   "Manual review required."
@@ -108,7 +109,7 @@ fi
 echo "=== Preflight infrastructure ==="
 
 COMPOSE_BASE=(
-  sudo -n docker compose
+  sudo -n docker compose -p rcc-sterlyn
   --env-file "$INFRA"
   -f compose.oracle.yaml
   -f compose.oracle-app.yaml
@@ -122,10 +123,12 @@ compose config --quiet
 
 DB_CID="$(compose ps -q db)"
 STORAGE_CID="$(compose ps -q storage)"
+SCANNER_CID="$(compose ps -q antivirus)"
+PROCESSOR_CID="$(compose ps -q processor)"
 WEB_CID="$(compose ps -q web)"
 WORKER_CID="$(compose ps -q worker)"
 
-for cid in "$DB_CID" "$STORAGE_CID" "$WEB_CID" "$WORKER_CID"; do
+for cid in "$DB_CID" "$STORAGE_CID" "$SCANNER_CID" "$PROCESSOR_CID" "$WEB_CID" "$WORKER_CID"; do
   test -n "$cid"
   test "$(sudo -n docker inspect -f '{{.State.Running}}' "$cid")" = true
 done
@@ -133,8 +136,10 @@ done
 PREVIOUS_WEB="$(sudo -n docker inspect -f '{{.Config.Image}}' "$WEB_CID")"
 PREVIOUS_WORKER="$(sudo -n docker inspect -f '{{.Config.Image}}' "$WORKER_CID")"
 
-sudo -n docker image inspect \
-  "$PREVIOUS_WEB" "$PREVIOUS_WORKER" >/dev/null
+sudo -n docker image inspect "$PREVIOUS_WEB" "$PREVIOUS_WORKER" >/dev/null
+mapfile -t override_images < <(awk '/^    image: / {print $2}' "$OVERRIDE")
+test "${override_images[0]}" = "$PREVIOUS_WEB"
+test "${override_images[1]}" = "$PREVIOUS_WORKER"
 
 FREE_KB="$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')"
 
@@ -148,7 +153,7 @@ echo "=== Fast-forward server source ==="
 git merge --ff-only origin/main
 test "$(git rev-parse HEAD)" = "$EXPECTED"
 
-IMAGE="sterlyn-app:release-${EXPECTED:0:12}"
+IMAGE="sterlyn-app:release-$EXPECTED"
 
 mkdir -p "$HISTORY"
 chmod 700 "$HISTORY"
@@ -166,42 +171,53 @@ finish() {
   if ((rc != 0 && SWITCHED == 1)); then
     echo "Deployment failed. Attempting rollback."
 
-    cp "$SNAPSHOT" "$OVERRIDE"
+    cp "$SNAPSHOT" "$TMP" && mv "$TMP" "$OVERRIDE" || exit "$rc"
 
     if compose up -d \
       --no-deps \
       --no-build \
       --force-recreate \
       worker web; then
-      echo "Previous release configuration restored."
+      if curl --fail --silent --show-error --retry 12 --retry-delay 3 --retry-all-errors --max-time 10 https://sterlynsupplies.com/api/ready >/dev/null; then
+        echo "Previous release restored and ready."
+      else
+        echo "CRITICAL: Restored containers did not become ready."
+      fi
     else
       echo "CRITICAL: Automatic rollback failed. Manual intervention required."
     fi
   fi
 
+  rm -f "${TMP:-}"
   exit "$rc"
 }
 
 trap finish EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
 
 echo "=== Build versioned image ==="
 
-sudo -n docker build \
-  --tag "$IMAGE" \
-  .
+if sudo -n docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  test "$(sudo -n docker image inspect "$IMAGE" -f '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$EXPECTED"
+else
+  git archive "$EXPECTED" | sudo -n docker build --label "org.opencontainers.image.revision=$EXPECTED" --tag "$IMAGE" -
+fi
 
 check_backup_window
+# The build can take minutes. Never switch to a commit superseded while it ran.
+git fetch --no-tags origin main
+test "$(git rev-parse origin/main)" = "$EXPECTED"
 
 echo "=== Deploy application containers ==="
 
 TMP="${OVERRIDE}.tmp.$$"
 
-printf 'services:\n  web:\n    image: %s\n  worker:\n    image: %s\n' \
+printf 'services:\n  web:\n    image: %s\n    environment:\n      PUBLIC_LAUNCH: "true"\n  worker:\n    image: %s\n' \
   "$IMAGE" "$IMAGE" > "$TMP"
 
-mv "$TMP" "$OVERRIDE"
-
 SWITCHED=1
+mv "$TMP" "$OVERRIDE"
 
 compose config --quiet
 
@@ -252,12 +268,15 @@ test "$(sudo -n docker inspect \
 curl --fail --silent --show-error \
   --retry 8 \
   --retry-delay 3 \
-  --retry-connrefused \
+  --retry-all-errors \
   --max-time 15 \
   https://sterlynsupplies.com/api/ready >/dev/null
 
 test "$(compose ps -q db)" = "$DB_CID"
 test "$(compose ps -q storage)" = "$STORAGE_CID"
+test "$(compose ps -q antivirus)" = "$SCANNER_CID"
+test "$(compose ps -q processor)" = "$PROCESSOR_CID"
+curl --fail --silent --show-error --max-time 15 https://sterlynsupplies.com/robots.txt | grep -Fx 'Sitemap: https://sterlynsupplies.com/sitemap.xml'
 
 compose ps
 

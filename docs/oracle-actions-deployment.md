@@ -27,3 +27,10 @@ to restore the previous release override and containers.
 Keep previous images for rollback. Do not run docker compose
 down, volume removal, git reset or git clean during
 routine releases.
+
+The release override enables `PUBLIC_LAUNCH` on the production web service.
+The worker and other deployments retain their defaults. Rollback restores the
+previous override along with the previous image tags. Only the HTTPS production
+origin can become indexable; the sitemap lists the public storefront and excludes
+private routes. Google Search Console ownership and sitemap submission are separate
+from technical indexing readiness.
