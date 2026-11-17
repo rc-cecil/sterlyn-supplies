@@ -1,0 +1,86 @@
+services:
+  web:
+    image: sterlyn-app:contact-fix-v1
+    restart: unless-stopped
+
+    env_file:
+      - /opt/rcc/secrets/sterlyn/application.env
+      - /opt/rcc/secrets/sterlyn/storage-client.env
+      - /opt/rcc/secrets/sterlyn/smtp.env
+
+    environment:
+      NODE_ENV: production
+      STERLYN_CLIENT_PREVIEW: "false"
+      PUBLIC_LAUNCH: "false"
+      READINESS_REQUIRE_MEDIA: "true"
+      TRUST_PROXY: "true"
+      CLAMAV_HOST: antivirus
+
+    ports:
+      - "127.0.0.1:3100:3000"
+
+    command:
+      - node
+      - .next/standalone/server.js
+
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+      antivirus:
+        condition: service_healthy
+      processor:
+        condition: service_started
+
+    security_opt:
+      - no-new-privileges:true
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  worker:
+    image: sterlyn-app:local
+    restart: unless-stopped
+
+    env_file:
+      - /opt/rcc/secrets/sterlyn/application.env
+      - /opt/rcc/secrets/sterlyn/storage-client.env
+      - /opt/rcc/secrets/sterlyn/smtp.env
+
+    environment:
+      NODE_ENV: production
+      STERLYN_CLIENT_PREVIEW: "false"
+      PUBLIC_LAUNCH: "false"
+      MEDIA_SPOOL: /spool
+      CLAMAV_HOST: antivirus
+
+    command:
+      - node
+      - --import
+      - tsx
+      - scripts/worker.ts
+
+    volumes:
+      - media_spool:/spool
+
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+      antivirus:
+        condition: service_healthy
+      processor:
+        condition: service_started
+
+    security_opt:
+      - no-new-privileges:true

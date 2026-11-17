@@ -8,7 +8,7 @@ import {runSchedules} from '../src/lib/scheduling';
 import {db} from '../src/lib/db';
 import {DeleteObjectCommand,ListObjectsV2Command} from '@aws-sdk/client-s3';
 import {object,putObject,storage} from '../src/lib/storage';
-const boss=new PgBoss(process.env.DATABASE_URL!);boss.on('error',e=>console.error('Queue error:',e.message));await boss.start();await boss.createQueue('media');
+const boss=new PgBoss({connectionString:process.env.DATABASE_URL!,createSchema:false});boss.on('error',e=>console.error('Queue error:',e.message));await boss.start();await boss.createQueue('media');
 async function processAsset(id:string,jobId:string,leaseToken:string){
  const asset=await db.mediaAsset.findUniqueOrThrow({where:{id}});
  const data=await object(asset.key);const chunks:Uint8Array[]=[];let received=0;for await(const chunk of data.Body as AsyncIterable<Uint8Array>){received+=chunk.length;if(received>100*1024*1024)throw new Error('Stored media exceeds limit');chunks.push(chunk);}const bytes=Buffer.concat(chunks);
