@@ -2,7 +2,7 @@ name: Verify Sterlyn
 on: [push, pull_request]
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   application:
     runs-on: ubuntu-latest
@@ -57,3 +57,58 @@ jobs:
             test-results/
             playwright-report/
             out/release-evidence/
+
+
+  deploy:
+    name: Approved Oracle production deployment
+    needs: application
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: production
+      url: https://sterlynsupplies.com
+    concurrency:
+      group: sterlyn-oracle-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy verified commit
+        shell: bash
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER }}
+          ORACLE_DEPLOY_KEY: ${{ secrets.ORACLE_DEPLOY_KEY }}
+          ORACLE_KNOWN_HOSTS: ${{ secrets.ORACLE_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+
+          for name in ORACLE_HOST ORACLE_USER ORACLE_DEPLOY_KEY ORACLE_KNOWN_HOSTS; do
+            test -n "${!name}" || {
+              echo "Missing required deployment secret: $name"
+              exit 1
+            }
+          done
+
+          umask 077
+          mkdir -p "$HOME/.ssh"
+
+          printf '%s\\n' "$ORACLE_DEPLOY_KEY" > "$HOME/.ssh/sterlyn_actions"
+          printf '%s\\n' "$ORACLE_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+
+          chmod 600 "$HOME/.ssh/sterlyn_actions" "$HOME/.ssh/known_hosts"
+
+          bash -n scripts/deploy-oracle.sh
+
+          ssh -o BatchMode=yes \\
+            -o IdentitiesOnly=yes \\
+            -o StrictHostKeyChecking=yes \\
+            -o ConnectTimeout=20 \\
+            -o ServerAliveInterval=15 \\
+            -o ServerAliveCountMax=8 \\
+            -i "$HOME/.ssh/sterlyn_actions" \\
+            "$ORACLE_USER@$ORACLE_HOST" \\
+            "bash -se -- '$GITHUB_SHA'" \\
+            < scripts/deploy-oracle.sh
