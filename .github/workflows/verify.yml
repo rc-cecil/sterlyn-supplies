@@ -24,6 +24,8 @@ jobs:
       PUBLIC_LAUNCH: 'false'
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Oracle deployment script
+        run: bash -n scripts/deploy-oracle.sh
       - uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
@@ -95,20 +97,20 @@ jobs:
           umask 077
           mkdir -p "$HOME/.ssh"
 
-          printf '%s\\n' "$ORACLE_DEPLOY_KEY" > "$HOME/.ssh/sterlyn_actions"
-          printf '%s\\n' "$ORACLE_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$ORACLE_DEPLOY_KEY" > "$HOME/.ssh/sterlyn_actions"
+          printf '%s\n' "$ORACLE_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
 
           chmod 600 "$HOME/.ssh/sterlyn_actions" "$HOME/.ssh/known_hosts"
 
           bash -n scripts/deploy-oracle.sh
 
-          ssh -o BatchMode=yes \\
-            -o IdentitiesOnly=yes \\
-            -o StrictHostKeyChecking=yes \\
-            -o ConnectTimeout=20 \\
-            -o ServerAliveInterval=15 \\
-            -o ServerAliveCountMax=8 \\
-            -i "$HOME/.ssh/sterlyn_actions" \\
-            "$ORACLE_USER@$ORACLE_HOST" \\
-            "bash -se -- '$GITHUB_SHA'" \\
+          ssh -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=8 \
+            -i "$HOME/.ssh/sterlyn_actions" \
+            "$ORACLE_USER@$ORACLE_HOST" \
+            "bash -se -- '$GITHUB_SHA'" \
             < scripts/deploy-oracle.sh
