@@ -12,7 +12,7 @@ export function storefrontIndexing(){
 export function storefrontMetadata({path,title,description,image=storefrontImage,index=true}:{path:string;title?:string;description:string;image?:string;index?:boolean}):Metadata{
  const url=storefrontOrigin+path;
  const shareTitle=title?`${title} | Sterlyn Supplies`:storefrontTitle;
- return {title,description,alternates:{canonical:url},robots:{index:storefrontIndexing()&&index,follow:true},
+ return {title:title??{absolute:storefrontTitle},description,alternates:{canonical:url},robots:{index:storefrontIndexing()&&index,follow:true},
   openGraph:{type:'website',siteName:'Sterlyn Supplies',url,title:shareTitle,description,images:[image]},
   twitter:{card:'summary_large_image',title:shareTitle,description,images:[image]}};
 }
