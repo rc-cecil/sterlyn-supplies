@@ -91,4 +91,254 @@ describe.skipIf(!enabled)('showroom PostgreSQL workflow',()=>{
   }finally{actor.id=ownerId;actor.role='owner';await db.user.delete({where:{id:member.id}});}
  });
 
+
+ it('edits enquiry products safely while preserving authorization, versions and orders',async()=>{
+  actor.role='owner';
+  const email=randomUUID()+'@showroom.invalid';
+  emails.push(email);
+
+  const created=await createEnquiry({
+   requestKey:randomUUID(),
+   name:'Enquiry editing customer',
+   email,
+   items:[]
+  });
+  quotes.push(created.id);
+
+  const initial=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+
+  await updateEnquiry({
+   id:created.id,
+   version:initial.version,
+   status:'new',
+   itemChanges:{adds:[{
+    name:'Custom fitted cabinet',
+    quantity:2,
+    finish:'Walnut'
+   }]}
+  });
+
+  let current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+  expect(current.items).toMatchObject([{
+   type:'custom',
+   name:'Custom fitted cabinet',
+   quantity:2,
+   finish:'Walnut'
+  }]);
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:initial.version,
+   status:'new',
+   itemChanges:{adds:[{name:'Stale addition',quantity:1}]}
+  })).rejects.toMatchObject({status:409});
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{edits:[
+    {index:0,name:'Duplicate A',quantity:1},
+    {index:0,name:'Duplicate B',quantity:1}
+   ]}
+  })).rejects.toThrow();
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{adds:[{
+    name:'Invalid quantity',
+    quantity:0
+   }]}
+  })).rejects.toThrow();
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{adds:Array.from({length:40},(_,i)=>({
+    name:'Extra '+i,
+    quantity:1
+   }))}
+  })).rejects.toMatchObject({status:400});
+
+  await db.quote.update({
+   where:{id:created.id},
+   data:{assignedTo:actor.id}
+  });
+
+  try{
+   actor.role='sales';
+
+   await expect(updateEnquiry({
+    id:created.id,
+    version:current.version,
+    status:'contacted',
+    itemChanges:{removes:[0]}
+   })).rejects.toMatchObject({status:403});
+
+   await updateEnquiry({
+    id:created.id,
+    version:current.version,
+    status:'contacted',
+    staffNotes:'Contacted customer'
+   });
+  }finally{
+   actor.role='owner';
+  }
+
+  current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+
+  await updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'contacted',
+   itemChanges:{edits:[{
+    index:0,
+    name:'Revised fitted cabinet',
+    quantity:3,
+    finish:'Oak'
+   }]}
+  });
+
+  current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+  expect(current.items).toMatchObject([{
+   name:'Revised fitted cabinet',
+   quantity:3,
+   finish:'Oak'
+  }]);
+
+  await updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'contacted',
+   itemChanges:{
+    removes:[0],
+    adds:[{name:'Replacement cabinet',quantity:1}]
+   }
+  });
+
+  current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+  expect(current.items).toMatchObject([{
+   type:'custom',
+   name:'Replacement cabinet',
+   quantity:1
+  }]);
+
+  const audit=await db.auditLog.findFirst({
+   where:{
+    entity:'quotes',
+    entityId:created.id,
+    action:'enquiry-updated'
+   },
+   orderBy:{createdAt:'desc'}
+  });
+  expect(audit).not.toBeNull();
+  expect(await db.enquiryEvent.count({
+   where:{quoteId:created.id}
+  })).toBeGreaterThan(2);
+
+  const confirmed=await convertEnquiry({
+   id:created.id,
+   amount:10000,
+   address:'Agreed address in Accra',
+   confirmAgreement:true,
+   confirmCustomer:true
+  });
+
+  const order=await db.order.findUniqueOrThrow({
+   where:{id:confirmed.record.id},
+   include:{items:true}
+  });
+  expect(order.items[0]).toMatchObject({
+   name:'Replacement cabinet',
+   quantity:1
+  });
+
+  current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'converted',
+   itemChanges:{removes:[0]}
+  })).rejects.toMatchObject({status:409});
+
+  expect((await db.order.findUniqueOrThrow({
+   where:{id:order.id},
+   include:{items:true}
+  })).items[0].name).toBe('Replacement cabinet');
+ });
+
+ it('preserves catalogue metadata and inspiration when editing a product line',async()=>{
+  actor.role='owner';
+  const email=randomUUID()+'@showroom.invalid';
+  emails.push(email);
+
+  const product=await db.product.findFirstOrThrow({
+   where:{status:'published'}
+  });
+
+  const created=await createEnquiry({
+   requestKey:randomUUID(),
+   name:'Quotation product customer',
+   email,
+   items:[
+    {type:'product',slug:product.slug,quantity:1},
+    {type:'inspiration',slug:'the-emerald-room',quantity:1}
+   ]
+  });
+  quotes.push(created.id);
+
+  let current=await db.quote.findUniqueOrThrow({
+   where:{id:created.id}
+  });
+  const before=current.items as unknown as Record<string,unknown>[];
+
+  await updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{edits:[{
+    index:0,
+    name:'Customer requested variation',
+    quantity:4,
+    finish:'Matt'
+   }]}
+  });
+
+  current=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+  const after=current.items as unknown as Record<string,unknown>[];
+
+  expect(after[0]).toMatchObject({
+   name:'Customer requested variation',
+   quantity:4,
+   finish:'Matt',
+   type:'product',
+   slug:before[0].slug,
+   image:before[0].image
+  });
+  expect(after[0].variantId).toBe(before[0].variantId);
+  expect(after[0].sku).toBe(before[0].sku);
+  expect(after[1]).toEqual(before[1]);
+
+  await expect(updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{removes:[1]}
+  })).rejects.toMatchObject({status:400});
+
+  await updateEnquiry({
+   id:created.id,
+   version:current.version,
+   status:'new',
+   itemChanges:{removes:[0]}
+  });
+
+  const result=await db.quote.findUniqueOrThrow({where:{id:created.id}});
+  expect(result.items).toEqual([before[1]]);
+ });
+
 });

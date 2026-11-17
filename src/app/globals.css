@@ -329,3 +329,25 @@ html[data-input-modality="pointer"] :focus{outline:none}
 @media(max-width:800px){.home-story{grid-template-columns:minmax(0,1fr);padding:56px 7%;gap:32px}.home-story-image{min-height:0;aspect-ratio:1.15}.home-story-copy>p{margin-top:20px}.home-services{padding:56px 7%}.home-project-guide{padding:56px 7%}.home-project-heading{grid-template-columns:minmax(0,1fr);gap:24px}.home-project-guide ol{grid-template-columns:minmax(0,1fr);gap:28px;margin:36px 0}.home-project-footer{align-items:flex-start;flex-direction:column;gap:24px}.home-project-footer .button{width:100%;justify-content:space-between}.home-story h2,.home-services h2,.home-project-guide h2{font-size:42px}.home-service-list h3{font-size:30px}}
 
 .home-story{scroll-margin-top:100px}
+
+
+.enquiry-product-line{
+  padding:16px;
+  margin:12px 0;
+  border:1px solid #d6ddcf;
+  border-radius:8px;
+  background:#fff;
+}
+.enquiry-product-fields{
+  display:grid;
+  grid-template-columns:minmax(0,2fr) minmax(85px,.6fr) minmax(0,1.5fr);
+  gap:12px;
+  margin-bottom:12px;
+}
+.enquiry-product-fields .field{min-width:0}
+.enquiry-product-fields input{width:100%;min-width:0}
+@media(max-width:650px){
+  .enquiry-product-fields{
+    grid-template-columns:minmax(0,1fr);
+  }
+}

@@ -76,9 +76,23 @@ function enquiryResult(quote:{id:string;reference:string;name:string;notes:strin
  return {id:quote.id,reference:quote.reference,whatsappUrl:`https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(text)}`,message:'Your enquiry is saved. Review and send the message in WhatsApp.'};
 }
 
+const editableEnquiryLine=z.object({
+ name:z.string().trim().min(1).max(200),
+ quantity:z.number().int().min(1).max(99),
+ finish:z.string().trim().max(200).default('')
+}).strict();
+
+const enquiryItemChanges=z.object({
+ edits:z.array(editableEnquiryLine.extend({
+  index:z.number().int().nonnegative()
+ })).max(40).default([]),
+ removes:z.array(z.number().int().nonnegative()).max(40).default([]),
+ adds:z.array(editableEnquiryLine).max(40).default([])
+}).strict();
+
 export async function updateEnquiry(input:unknown){
  const actor=await staff('quotes');
- const v=z.object({id,version:z.number().int(),status:z.enum(enquiryStatuses),assignedTo:z.string().optional(),staffNotes:z.string().max(5000).optional(),reason:optionalNote}).parse(input);
+ const v=z.object({id,version:z.number().int(),status:z.enum(enquiryStatuses),assignedTo:z.string().optional(),staffNotes:z.string().max(5000).optional(),itemChanges:enquiryItemChanges.optional(),reason:optionalNote}).parse(input);
  return db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM "Quote" WHERE id=${v.id} FOR UPDATE`;
   const current=await tx.quote.findUniqueOrThrow({where:{id:v.id}});
@@ -86,9 +100,87 @@ export async function updateEnquiry(input:unknown){
   if(current.version!==v.version)throw new HttpError(409,'This enquiry changed. Reload before saving.');
   if(current.status==='converted'||v.status==='converted'||await tx.order.findUnique({where:{sourceQuoteId:v.id},select:{id:true}}))throw new HttpError(409,'Converted status is managed by order creation.');
   const assignedTo=v.assignedTo===undefined?current.assignedTo:await assignee(tx,v.assignedTo,'quotes');
-  await tx.quote.update({where:{id:v.id},data:{status:v.status,staffNotes:v.staffNotes,assignedTo,version:{increment:1}}});
-  await tx.enquiryEvent.create({data:{quoteId:v.id,previousStatus:current.status,status:v.status,actorId:actor.id,note:v.reason||(assignedTo!==current.assignedTo?'Assignment updated.':current.status!==v.status?'Enquiry moved to '+label(v.status)+'.':'Enquiry details updated.')}});
-  await record(tx,actor,'enquiry-updated','quotes',v.id,{from:current.status,to:v.status,reason:v.reason,assignedTo,previousAssignedTo:current.assignedTo});return {message:'Enquiry updated.'};
+
+  let requestedItems:ItemSnapshot[]|undefined;
+  let itemSummary:{added:number;edited:number;removed:number}|undefined;
+
+  if(v.itemChanges){
+   if(!manager(actor))throw new HttpError(403,'Only an owner or administrator can edit requested products.');
+
+   const original=z.array(itemSnapshot).parse(current.items);
+   const {edits,removes,adds}=v.itemChanges;
+   const indexes=[...edits.map(item=>item.index),...removes];
+
+   if(new Set(indexes).size!==indexes.length)
+    throw new HttpError(400,'A product line cannot be changed more than once.');
+
+   for(const index of indexes){
+    if(index>=original.length||!['product','custom'].includes(original[index].type))
+     throw new HttpError(400,'Choose an editable product line.');
+   }
+
+   const changed=new Map(edits.map(item=>[item.index,item]));
+   const removed=new Set(removes);
+
+   requestedItems=original.flatMap((item,index)=>{
+    if(removed.has(index))return [];
+    const edit=changed.get(index);
+    return [edit?{
+     ...item,
+     name:edit.name,
+     quantity:edit.quantity,
+     finish:edit.finish
+    }:item];
+   });
+
+   requestedItems.push(...adds.map(item=>({
+    type:'custom' as const,
+    name:item.name,
+    quantity:item.quantity,
+    finish:item.finish
+   })));
+
+   if(requestedItems.length>40)
+    throw new HttpError(400,'An enquiry cannot contain more than 40 items.');
+
+   itemSummary={
+    added:adds.length,
+    edited:edits.length,
+    removed:removes.length
+   };
+  }
+
+  await tx.quote.update({where:{id:v.id},data:{
+   status:v.status,
+   staffNotes:v.staffNotes,
+   assignedTo,
+   ...(requestedItems?{items:json(requestedItems)}:{}),
+   version:{increment:1}
+  }});
+
+  const productsChanged=!!itemSummary&&
+   itemSummary.added+itemSummary.edited+itemSummary.removed>0;
+
+  await tx.enquiryEvent.create({data:{
+   quoteId:v.id,
+   previousStatus:current.status,
+   status:v.status,
+   actorId:actor.id,
+   note:v.reason||(productsChanged?'Requested products updated.':
+    assignedTo!==current.assignedTo?'Assignment updated.':
+    current.status!==v.status?'Enquiry moved to '+label(v.status)+'.':
+    'Enquiry details updated.')
+  }});
+
+  await record(tx,actor,'enquiry-updated','quotes',v.id,{
+   from:current.status,
+   to:v.status,
+   reason:v.reason,
+   assignedTo,
+   previousAssignedTo:current.assignedTo,
+   ...(itemSummary?{itemChanges:itemSummary}:{})
+  });
+  return {message:'Enquiry updated.'};
  });
 }
 const conversionInput=z.object({id,email:z.email().max(254).transform(value=>value.toLowerCase()).optional(),amount:amountSchema,currency:currencySchema.default('GHS'),address:z.string().trim().min(3).max(2000),expectedDelivery:z.iso.date().optional(),instructions:z.string().max(4000).default(''),assignedTo:z.string().optional(),customerId:z.string().optional(),confirmCustomer:z.literal(true),confirmAgreement:z.boolean().default(false),reason:optionalNote});
@@ -214,7 +306,7 @@ export async function showroomRead(resource:string,query:URLSearchParams){
   const where:Prisma.QuoteWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...enquiryFilter,OR:[{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{phone:{contains:q}}]};
   const [rows,total,staffMembers]=await Promise.all([db.quote.findMany({where,...paging,orderBy,include:{order:{select:{id:true,reference:true}},customer:true,history:{orderBy:{createdAt:'asc'}}}}),db.quote.count({where}),staffList()]);
   const candidates=await db.customer.findMany({where:{email:{in:rows.filter(row=>!row.customerId).map(row=>row.email.toLowerCase())}},select:{id:true,name:true,email:true}});
-  return {currentStaffId:actor.id,canAssign:manager(actor),rows:rows.map(row=>({...row,status:row.order?'converted':canonicalEnquiryStatus(row.status)})),total,staff:staffMembers,candidates,canConvert:allowed(actor.role,'orders')};
+  return {currentStaffId:actor.id,canAssign:manager(actor),rows:rows.map(row=>({...row,status:row.order?'converted':canonicalEnquiryStatus(row.status)})),total,staff:staffMembers,candidates,canConvert:allowed(actor.role,'orders'),canEditItems:manager(actor)};
  }
  if(resource==='orders'){
   const where:Prisma.OrderWhereInput={...(!manager(actor)?{assignedTo:actor.id}:query.get('assignedTo')?{assignedTo:query.get('assignedTo')}:{}),...(query.get('record')?{id:query.get('record')!}:{}),...(status?{status:{in:({confirmed:['confirmed','awaiting_confirmation','paid'],dispatched:['dispatched','shipped']} as Record<string,string[]>)[status]||[status]}}:{}),OR:[{id:{contains:q}},{reference:{contains:q,mode:'insensitive'}},{name:{contains:q,mode:'insensitive'}},{email:{contains:q,mode:'insensitive'}},{phone:{contains:q}}]};
