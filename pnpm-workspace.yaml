@@ -11,5 +11,3 @@ minimumReleaseAgeExclude:
 overrides:
   "zod@>=4.0.0 <4.6.6": "4.6.7"
   "fast-uri@>=3.0.0 <3.1.9": "3.1.9"
-  # Better Auth's optional test helper must not pull Vitest into the runtime graph.
-  "better-auth>vitest": "-"
