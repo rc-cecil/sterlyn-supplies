@@ -19,8 +19,15 @@ test('Efferd dashboard has usable chart controls, keyboard inspection, filtering
   expect((await authPost(page.request,'/api/auth/sign-in/email',{headers:{origin},data:{email:ownerEmail,password}})).ok()).toBe(true);
   await page.setViewportSize({width:1440,height:1080});await page.goto('/admin');await expect(page.locator('.activity-card')).toBeVisible();await expect(page.locator('.recharts-area-curve')).toHaveCount(2);
   const periods=page.getByRole('group',{name:'Reporting period',exact:true}),series=page.getByRole('group',{name:'Visible chart series',exact:true});
+  await expect(page.getByRole('heading',{name:'Current workload'})).toBeVisible();
+  const preparation=page.getByRole('link',{name:/^Orders in preparation/}).locator('strong');
+  const originalPreparation=await preparation.textContent();
+  const originalOrders=Number(await series.getByRole('button',{name:/^Orders/}).locator('b').textContent());
+  expect(Number(originalPreparation)).toBeGreaterThan(0);
   const response=page.waitForResponse(response=>response.url().includes('/api/admin/overview?days=7'));
   await periods.getByRole('button',{name:'7 days',exact:true}).click();expect((await response).ok()).toBe(true);await expect(periods.getByRole('button',{name:'7 days',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.locator('.activity-card')).toHaveAttribute('aria-busy','false');
+  await expect(preparation).toHaveText(originalPreparation!);
+  expect(Number(await series.getByRole('button',{name:/^Orders/}).locator('b').textContent())).toBeLessThan(originalOrders);
   await series.getByRole('button',{name:/^Enquiries/}).click();await expect(series.getByRole('button',{name:/^Enquiries/})).toHaveAttribute('aria-pressed','false');await expect(page.locator('.recharts-area-curve')).toHaveCount(1);await series.getByRole('button',{name:/^Enquiries/}).click();await expect(page.locator('.recharts-area-curve')).toHaveCount(2);
   const chart=page.locator('.activity-card svg.recharts-surface');await chart.focus();await page.keyboard.press('ArrowRight');await expect(page.getByTestId('activity-tooltip')).toBeVisible();await expect(page.getByTestId('activity-tooltip')).toContainText('Enquiries');await page.keyboard.press('ArrowLeft');
   const thirty=page.waitForResponse(response=>response.url().includes('/api/admin/overview?days=30'));await periods.getByRole('button',{name:'30 days',exact:true}).click();await thirty;await expect(page.locator('.activity-card')).toHaveAttribute('aria-busy','false');
